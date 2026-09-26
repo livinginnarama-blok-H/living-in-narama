@@ -108,7 +108,7 @@ export const AuthService = {
 
       return {
         success: false,
-        error: 'Email atau kata sandi tidak benar.',
+        error: error.message,
       }
     }
 
