@@ -1,0 +1,6 @@
+{
+  "name": "Portal Warga Griya Adika Narama - Blok H",
+  "description": "Portal informasi dan administrasi warga Blok H Griya Adika Narama dengan desain modern, minimalis, bertema hijau nuansa pegunungan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
