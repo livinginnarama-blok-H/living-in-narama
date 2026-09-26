@@ -557,22 +557,38 @@ export type DocumentationItem = Documentation;
  * ==========================================================
  */
 
+export type AdminRole =
+  | 'super_admin'
+  | 'admin'
+  | 'editor';
+
 export interface AdminUser {
   id: string;
 
+  /**
+   * Email yang digunakan untuk login Supabase Auth.
+   */
   username: string;
 
+  /**
+   * Nama pengguna/pengurus.
+   */
   name: string;
 
-  role:
-    | 'pengurus_rt'
-    | 'bendahara'
-    | 'sekretaris'
-    | 'seksi_keamanan'
-    | 'superadmin';
+  /**
+   * Hak akses pengguna.
+   */
+  role: AdminRole;
 
+  /**
+   * Menandakan akun demo atau akun production.
+   */
   isDemo: boolean;
 
+  /**
+   * Token tidak lagi dikelola secara manual.
+   * Supabase Auth menangani session/token.
+   */
   token?: string;
 
   lastLogin?: string;
@@ -590,7 +606,8 @@ export interface AuthSession {
 
   mode:
     | 'demo'
-    | 'production_d1';
+    | 'production_d1'
+    | 'supabase';
 }
 
 /**

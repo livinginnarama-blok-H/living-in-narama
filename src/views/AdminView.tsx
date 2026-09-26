@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { TabKey, CitizenReport } from '../types/portal';
 import { DataService } from '../services/dataService';
-import { AuthService, DEMO_CREDENTIALS } from '../services/authService';
+import { AuthService } from '../services/authService';
 import {
   Lock,
   UserCheck,
-  Shield,
-  KeyRound,
   FileCode,
   Copy,
   Check,
@@ -16,7 +14,6 @@ import {
   Calendar,
   Wallet,
   CheckCircle2,
-  Clock,
   MessageSquare,
   Cloud,
   Terminal,
@@ -38,7 +35,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onSelectTab,
 }) => {
   // Login form state
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,33 +58,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const workerCode = DataService.generateCloudflareWorkerExample();
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setErrorMsg('');
+  e.preventDefault();
 
-    const res = await AuthService.loginDemo({ username, password });
-    setIsSubmitting(false);
+  setIsSubmitting(true);
+  setErrorMsg('');
 
-    if (res.success) {
-      onLoginSuccess();
-    } else {
-      setErrorMsg(res.error || 'Username atau kata sandi tidak cocok.');
-    }
-  };
+  const res = await AuthService.login(email, password);
 
-  const handleQuickDemoLogin = async () => {
-    setIsSubmitting(true);
-    setErrorMsg('');
-    setUsername(DEMO_CREDENTIALS.username);
-    setPassword(DEMO_CREDENTIALS.password);
+  setIsSubmitting(false);
 
-    const res = await AuthService.loginDemo(DEMO_CREDENTIALS);
-    setIsSubmitting(false);
-
-    if (res.success) {
-      onLoginSuccess();
-    }
-  };
+  if (res.success) {
+    onLoginSuccess();
+  } else {
+    setErrorMsg(res.error || 'Email atau kata sandi tidak cocok.');
+  }
+};
 
   const handleUpdateReportStatus = (id: string, newStatus: CitizenReport['status']) => {
     DataService.updateReportStatus(id, newStatus);
@@ -127,13 +112,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </p>
           </div>
 
-          {/* Architectural Notice: Demo Authentication Only */}
+          {/* Supabase Authentication Notice  */}
           <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl flex items-start gap-2.5 text-xs text-amber-900">
             <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
             <div className="space-y-0.5">
-              <span className="font-bold">Akses Demo Pengurus:</span>
+              <span className="font-bold">Akses Pengurus:</span>
               <p className="text-amber-800 text-[11px] leading-relaxed">
-                Ini adalah simulasi autentikasi percontohan. Pada tahap produksi, sesi ini akan digantikan oleh Cloudflare Access / JWT Session terverifikasi.
+                Gunakan akun pengurus yang telah terdaftar pada sistem untuk mengakses panel administrasi Blok H.
               </p>
             </div>
           </div>
@@ -146,15 +131,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Username Admin</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Email Admin
+              </label>
+
               <input
-                type="text"
+                type="email"
                 required
-                placeholder="admin"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700"
-              />
+                placeholder="email pengurus"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700"/>      
             </div>
 
             <div>
@@ -177,24 +164,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               {isSubmitting ? 'Memverifikasi...' : 'Masuk ke Panel Pengurus'}
             </button>
           </form>
-
-          {/* Quick Demo Access Button */}
-          <div className="pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={handleQuickDemoLogin}
-              disabled={isSubmitting}
-              className="w-full py-2 text-xs font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <KeyRound className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Gunakan Kredensial Demo (1-Klik Masuk)</span>
-            </button>
-            <p className="text-[11px] text-center text-slate-400 mt-1.5">
-              Demo: username: <code className="font-mono">admin</code> · kata sandi:{' '}
-              <code className="font-mono">narama2026</code>
-            </p>
           </div>
-        </div>
       </div>
     );
   }
@@ -206,7 +176,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs text-emerald-300 font-semibold">
             <UserCheck className="w-4 h-4 text-emerald-400" />
-            <span>Mode Administrasi (Simulasi Demo)</span>
+            <span>Mode Administrasi</span>
             <span aria-hidden="true">·</span>
             <span>Pengurus Paguyuban Blok H</span>
           </div>

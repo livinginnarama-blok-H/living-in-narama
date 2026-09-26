@@ -23,17 +23,25 @@ import { AdminView } from './views/AdminView';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('beranda');
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => AuthService.isDemoAuthenticated());
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
 
   // Subscribe to centralized auth session changes (no direct storage access in view)
   useEffect(() => {
-    const unsubscribe = AuthService.subscribe((session) => {
-      setIsAdmin(session.isAuthenticated);
-    });
-    return unsubscribe;
-  }, []);
+  AuthService.initialize();
+
+  const unsubscribe = AuthService.subscribe((session) => {
+    setIsAdmin(session.isAuthenticated);
+  });
+
+  const cleanupAuthListener = AuthService.setupAuthListener();
+
+  return () => {
+    unsubscribe();
+    cleanupAuthListener();
+  };
+}, []);
 
   // Scroll to top on tab change
   const handleSelectTab = (tab: TabKey) => {
@@ -41,10 +49,10 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleLogout = () => {
-    AuthService.logoutDemo();
-    setActiveTab('beranda');
-  };
+ const handleLogout = async () => {
+  await AuthService.logout();
+  setActiveTab('beranda');
+};
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f6f9f6] text-slate-800 font-sans selection:bg-emerald-200 selection:text-emerald-900">
