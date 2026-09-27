@@ -14,20 +14,43 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
 
   // Subscribe to centralized DataService
   useEffect(() => {
-    const unsubscribe = DataService.subscribe(() => {
-      setItems(DataService.getDocumentation());
-    });
-    return unsubscribe;
-  }, []);
+  let mounted = true;
 
+  const loadDocumentation = async () => {
+    try {
+      const data = await DataService.fetchDocumentation();
+
+      if (mounted) {
+        setItems(data);
+      }
+    } catch (error) {
+      console.error('Gagal memuat dokumentasi:', error);
+    }
+  };
+
+  loadDocumentation();
+
+  const unsubscribe = DataService.subscribe(() => {
+    if (mounted) {
+      setItems(DataService.getDocumentation());
+    }
+  });
+
+  return () => {
+    mounted = false;
+    unsubscribe();
+  };
+}, []);
   // Admin Add Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState<DocumentationItem['category']>('kerja-bakti');
   const [newDate, setNewDate] = useState('September 2026');
   const [newDescription, setNewDescription] = useState('');
-  const [newImageUrl, setNewImageUrl] = useState('');
+ const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newPhotographer, setNewPhotographer] = useState('Warga Blok H');
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const categories = [
     { id: 'semua', label: 'Semua Dokumentasi' },
@@ -42,25 +65,50 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
     return item.category === activeCategory;
   });
 
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim()) return;
+  const handleAddSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    DataService.addDocumentation({
-      title: newTitle.trim(),
-      category: newCategory,
-      date: newDate,
-      description: newDescription,
-      image: newImageUrl || items[0]?.image,
-      photographer: newPhotographer,
-    });
+  if (!newTitle.trim()) return;
 
-    setItems(DataService.getDocumentation());
+  if (!newImageFile) {
+    setErrorMessage('Silakan pilih foto dokumentasi terlebih dahulu.');
+    return;
+  }
+
+  try {
+    setIsSaving(true);
+    setErrorMessage('');
+
+    const saved = await DataService.addDocumentation(
+      {
+        title: newTitle.trim(),
+        category: newCategory,
+        date: newDate,
+        description: newDescription,
+        photographer: newPhotographer,
+      },
+      newImageFile
+    );
+
+    setItems((current) => [saved, ...current]);
+
     setIsAddModalOpen(false);
     setNewTitle('');
     setNewDescription('');
-    setNewImageUrl('');
-  };
+    setNewImageFile(null);
+    setNewPhotographer('Warga Blok H');
+  } catch (error) {
+    console.error('Gagal menyimpan dokumentasi:', error);
+
+    setErrorMessage(
+      error instanceof Error
+        ? error.message
+        : 'Gagal menyimpan dokumentasi.'
+    );
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   return (
     <div className="space-y-6">
@@ -70,9 +118,6 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800">
             <Camera className="w-4 h-4 text-emerald-700" />
             <span>Galeri & Arsip Kegiatan</span>
-            <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">
-              DATA DEMO
-            </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Dokumentasi Lingkungan Blok H
@@ -216,6 +261,26 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
           <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-base font-bold text-slate-900">Tambah Dokumentasi Baru</h3>
+              <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Foto Dokumentasi
+              </label>
+
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                required
+                onChange={(e) => {
+                  setNewImageFile(e.target.files?.[0] || null);
+                  setErrorMessage('');
+                }}
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700"
+              />
+
+              <p className="text-[11px] text-slate-500 mt-1">
+                Format JPG, PNG, atau WebP. Maksimal 50 MB.
+              </p>
+            </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
@@ -294,7 +359,11 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700"
                 />
               </div>
-
+              {errorMessage && (
+                <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  {errorMessage}
+                </div>
+              )}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
                   type="button"
@@ -305,9 +374,10 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-700 rounded-lg transition-colors"
+                  disabled={isSaving}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
                 >
-                  Simpan ke Galeri
+                  {isSaving ? 'Mengunggah...' : 'Simpan ke Galeri'}
                 </button>
               </div>
             </form>

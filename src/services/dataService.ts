@@ -294,7 +294,10 @@ export interface IPortalDataRepository {
   // Documentation
   getDocumentation(): Documentation[];
   fetchDocumentation(): Promise<Documentation[]>;
-  addDocumentation(item: Omit<Documentation, 'id' | 'createdAt'>): Promise<Documentation>;
+  addDocumentation(
+  item: Omit<Documentation, 'id' | 'createdAt' | 'image'>,
+  imageFile: File
+): Promise<Documentation>;
 
   // Citizen Reports
   getReports(): CitizenReport[];
@@ -1342,58 +1345,134 @@ export const DataService: IPortalDataRepository = {
   // ==========================================
   // 7. DOCUMENTATION / GALLERY
   // ==========================================
+    // ==========================================
+  // 7. DOCUMENTATION
+  // ==========================================
+
   getDocumentation(): Documentation[] {
-    return getStored<Documentation[]>(STORAGE_KEYS.DOCUMENTATION, INITIAL_DOCUMENTATION);
+    return getStored<Documentation[]>(
+      STORAGE_KEYS.DOCUMENTATION,
+      []
+    );
   },
 
   async fetchDocumentation(): Promise<Documentation[]> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<Documentation[]>>('/documentation');
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal memuat dokumentasi dari Worker API');
-        }
-        return json.data || [];
-      } catch (err) {
-        console.error('[DataService] Worker fetchDocumentation error:', err);
-        throw err;
-      }
+    const { data, error } = await supabase
+      .from('documentation')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[DataService] Supabase fetchDocumentation error:', error);
+      throw new Error(
+        error.message || 'Gagal memuat dokumentasi dari Supabase'
+      );
     }
-    return this.getDocumentation();
+
+    const documentation: Documentation[] = (data || []).map((item) => ({
+      id: item.id,
+      title: item.title,
+      date: item.date,
+      category: item.category,
+      description: item.description || '',
+      image: item.image_url,
+      photographer: item.photographer || '',
+      createdAt: item.created_at,
+    }));
+
+    setStored<Documentation[]>(
+      STORAGE_KEYS.DOCUMENTATION,
+      documentation
+    );
+
+    emitDataChange();
+
+    return documentation;
   },
 
-  async addDocumentation(item: Omit<Documentation, 'id' | 'createdAt'>): Promise<Documentation> {
-    const newItem: Documentation = {
-      ...item,
-      id: generateSafeId('doc'),
-      createdAt: new Date().toISOString(),
+  async addDocumentation(
+    item: Omit<Documentation, 'id' | 'createdAt' | 'image'>,
+    imageFile: File
+  ): Promise<Documentation> {
+    const id = generateSafeId('doc');
+
+    const extension =
+      imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+
+    const filePath = `${id}-${Date.now()}.${extension}`;
+
+    // 1. Upload foto ke Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('documentation')
+      .upload(filePath, imageFile, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error(
+        '[DataService] Supabase uploadDocumentation error:',
+        uploadError
+      );
+      throw new Error(
+        uploadError.message || 'Gagal mengunggah foto dokumentasi'
+      );
+    }
+
+    // 2. Ambil URL publik foto
+    const { data: publicUrlData } = supabase.storage
+      .from('documentation')
+      .getPublicUrl(filePath);
+
+    const imageUrl = publicUrlData.publicUrl;
+
+    // 3. Simpan metadata ke tabel documentation
+    const { data, error } = await supabase
+      .from('documentation')
+      .insert({
+        id,
+        title: item.title,
+        date: item.date,
+        category: item.category,
+        description: item.description,
+        image_url: imageUrl,
+        photographer: item.photographer,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase addDocumentation error:',
+        error
+      );
+      throw new Error(
+        error.message || 'Gagal menyimpan dokumentasi'
+      );
+    }
+
+    const documentation: Documentation = {
+      id: data.id,
+      title: data.title,
+      date: data.date,
+      category: data.category,
+      description: data.description || '',
+      image: data.image_url,
+      photographer: data.photographer || '',
+      createdAt: data.created_at,
     };
 
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<Documentation>>('/documentation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newItem),
-        });
-        if (!json.success || !json.data) {
-          throw new Error(json.error || 'Gagal menambah dokumentasi via Worker API');
-        }
-        emitDataChange();
-        return json.data;
-      } catch (err) {
-        console.error('[DataService] Worker addDocumentation error:', err);
-        throw err;
-      }
-    }
-
     const current = this.getDocumentation();
-    const updated = [newItem, ...current];
-    setStored(STORAGE_KEYS.DOCUMENTATION, updated);
-    emitDataChange();
-    return newItem;
-  },
 
+    setStored<Documentation[]>(
+      STORAGE_KEYS.DOCUMENTATION,
+      [documentation, ...current]
+    );
+
+    emitDataChange();
+
+    return documentation;
+  },
   // ==========================================
   // 8. CITIZEN REPORTS & SUGGESTIONS
   // ==========================================
