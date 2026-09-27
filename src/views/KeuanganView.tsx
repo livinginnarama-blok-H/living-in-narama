@@ -1109,8 +1109,11 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
                         <option value="penerangan-cctv">Penerangan Jalan & CCTV</option>
                         <option value="perawatan-fasum">Perawatan Fasum & Taman</option>
                         <option value="kas-sosial">Santunan Sosial Warga</option>
-                        <option value="operasional">Operasional Paguyuban</option>
-                      </>
+                        <option value="maintenance-mobil">Perawatan Mobil</option>
+                        <option value="kas-paguyuban">Kas Paguyuban</option>
+                        <option value="kongsi-kematian">Kongsi Kematian</option>
+                        <option value="operasional">Operasional Blok H</option>
+                        </>
                     )}
                   </select>
                 </div>
