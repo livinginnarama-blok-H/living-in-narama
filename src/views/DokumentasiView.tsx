@@ -381,8 +381,230 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
           </div>
         </div>
       )}
+```tsx
+      {/* Edit Documentation Modal */}
+      {isEditModalOpen && editingItem && isAdmin && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => {
+            if (!isSaving) {
+              setIsEditModalOpen(false);
+              setEditingItem(null);
+              setEditImageFile(null);
+              setErrorMessage('');
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Edit Dokumentasi
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  ID: {editingItem.id}
+                </p>
+              </div>
 
-      {/* Admin Add Photo Modal */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isSaving) {
+                    setIsEditModalOpen(false);
+                    setEditingItem(null);
+                    setEditImageFile(null);
+                    setErrorMessage('');
+                  }
+                }}
+                disabled={isSaving}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                title="Tutup"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleEditSubmit} className="space-y-5 p-5">
+              {/* Error Message */}
+              {errorMessage && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {errorMessage}
+                </div>
+              )}
+
+              {/* Title */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                  Judul Dokumentasi
+                </label>
+
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  required
+                  disabled={isSaving}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-50"
+                  placeholder="Masukkan judul dokumentasi"
+                />
+              </div>
+
+              {/* Category + Date */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Kategori
+                  </label>
+
+                  <select
+                    value={editCategory}
+                    onChange={(e) =>
+                      setEditCategory(
+                        e.target.value as DocumentationItem['category']
+                      )
+                    }
+                    disabled={isSaving}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-50"
+                  >
+                    <option value="kerja-bakti">Kerja Bakti</option>
+                    <option value="lingkungan">Lingkungan</option>
+                    <option value="sosial">Sosial</option>
+                    <option value="pembangunan">Pembangunan</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Tanggal
+                  </label>
+
+                  <input
+                    type="text"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    required
+                    disabled={isSaving}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-50"
+                    placeholder="Contoh: September 2026"
+                  />
+                </div>
+              </div>
+
+              {/* Photographer */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                  Fotografer
+                </label>
+
+                <input
+                  type="text"
+                  value={editPhotographer}
+                  onChange={(e) => setEditPhotographer(e.target.value)}
+                  disabled={isSaving}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-50"
+                  placeholder="Nama fotografer"
+                />
+              </div>
+
+              {/* Current Photo */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                  Foto Saat Ini
+                </label>
+
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                  <img
+                    src={editingItem.image}
+                    alt={editingItem.title}
+                    referrerPolicy="no-referrer"
+                    className="h-48 w-full object-cover"
+                  />
+                </div>
+              </div>
+
+              {/* New Photo */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                  Ganti Foto
+                  <span className="ml-1 font-normal text-slate-400">
+                    (opsional)
+                  </span>
+                </label>
+
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={isSaving}
+                  onChange={(e) => {
+                    setEditImageFile(e.target.files?.[0] || null);
+                  }}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-700 hover:file:bg-emerald-100"
+                />
+
+                <p className="mt-1.5 text-[11px] text-slate-400">
+                  Pilih foto baru jika ingin mengganti foto saat ini. Maksimal
+                  50 MB.
+                </p>
+
+                {editImageFile && (
+                  <p className="mt-2 text-xs font-medium text-emerald-700">
+                    Foto baru: {editImageFile.name}
+                  </p>
+                )}
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                  Deskripsi
+                </label>
+
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={4}
+                  disabled={isSaving}
+                  className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-50"
+                  placeholder="Masukkan deskripsi dokumentasi"
+                />
+              </div>
+
+              {/* Footer */}
+              <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isSaving) {
+                      setIsEditModalOpen(false);
+                      setEditingItem(null);
+                      setEditImageFile(null);
+                      setErrorMessage('');
+                    }
+                  }}
+                  disabled={isSaving}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+   {/* Admin Add Photo Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
           <div className="fixed inset-0" onClick={() => setIsAddModalOpen(false)} />
