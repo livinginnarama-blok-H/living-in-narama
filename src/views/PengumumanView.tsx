@@ -114,15 +114,14 @@ export const PengumumanView: React.FC<PengumumanViewProps> = ({ isAdmin }) => {
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800">
             <Bell className="w-4 h-4 text-emerald-700" />
             <span>Papan Informasi Resmi</span>
-            <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">
-              DATA DEMO
-            </span>
           </div>
+
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Pengumuman Warga Blok H
           </h2>
+
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Daftar pengumuman percontohan untuk menguji fitur publikasi berita, kategori, dan penyebaran informasi warga.
+            Informasi dan pemberitahuan resmi untuk warga Griya Adika Narama Blok H.
           </p>
         </div>
 

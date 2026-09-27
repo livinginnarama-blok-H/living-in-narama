@@ -23,56 +23,7 @@ import {
  * atau data faktual yang diikutsertakan.
  */
 
-export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: 'ann-1',
-    title: '[Demo] Pemberitahuan Kegiatan Gotong Royong Kebersihan Lingkungan (Contoh)',
-    category: 'kerja-bakti',
-    date: '2026-09-24',
-    author: '[Pengurus Demo] Koordinator Lingkungan',
-    content:
-      '(Contoh Konten Pengumuman Warga) Seluruh warga dihimbau untuk berpartisipasi dalam kegiatan gotong royong kebersihan lingkungan berkala di area fasilitas bersama. Warga diharapkan membawa perlengkapan kebersihan masing-masing. Informasi jadwal resmi akan diperbarui secara berkala oleh pengurus.',
-    isPinned: true,
-    tagline: '[Pengumuman Contoh / Data Demo]',
-    createdAt: '2026-09-24T08:00:00.000Z',
-  },
-  {
-    id: 'ann-2',
-    title: '[Demo] Laporan Simulasi Rekapitulasi Iuran Lingkungan (Contoh)',
-    category: 'iuran',
-    date: '2026-09-20',
-    author: '[Pengurus Demo] Bendahara',
-    content:
-      '(Contoh Laporan Iuran) Informasi ini merupakan simulasi pencatatan iuran pengelolaan lingkungan untuk keperluan uji coba portal warga. Rekening resmi paguyuban dan rincian besaran iuran aktual akan disosialisasikan secara resmi oleh pengurus.',
-    isPinned: true,
-    tagline: '[Simulasi Pembukuan / Data Demo]',
-    createdAt: '2026-09-20T09:00:00.000Z',
-  },
-  {
-    id: 'ann-3',
-    title: '[Demo] Panduan Ketertiban & Pelaporan Tamu Lingkungan (Contoh)',
-    category: 'keamanan',
-    date: '2026-09-15',
-    author: '[Pengurus Demo] Seksi Keamanan',
-    content:
-      '(Contoh Panduan Lingkungan) Untuk kenyamanan dan ketertiban bersama, tamu atau kendaraan luar yang berkunjung pada malam hari diharapkan melapor di pos keamanan lingkungan. Standar operasional resmi akan disahkan dalam musyawarah warga.',
-    isPinned: false,
-    tagline: '[Panduan Contoh / Data Demo]',
-    createdAt: '2026-09-15T14:30:00.000Z',
-  },
-  {
-    id: 'ann-4',
-    title: '[Demo] Pemeliharaan Fasilitas Umum & Area Hijau Lingkungan (Contoh)',
-    category: 'kegiatan',
-    date: '2026-09-10',
-    author: '[Pengurus Demo] Sarana Prasarana',
-    content:
-      '(Contoh Pemberitahuan) Pemeliharaan penerangan jalan umum dan perawatan area hijau di lingkungan perumahan telah selesai dilakukan sebagai bagian dari kegiatan perawatan rutin fasilitas bersama.',
-    isPinned: false,
-    tagline: '[Fasilitas Bersama / Data Demo]',
-    createdAt: '2026-09-10T10:15:00.000Z',
-  },
-];
+export const INITIAL_ANNOUNCEMENTS: Announcement[] = [];
 
 export const INITIAL_AGENDAS: AgendaItem[] = [
   {
