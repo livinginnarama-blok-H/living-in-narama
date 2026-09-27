@@ -381,7 +381,6 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
           </div>
         </div>
       )}
-```tsx
       {/* Edit Documentation Modal */}
       {isEditModalOpen && editingItem && isAdmin && (
         <div
