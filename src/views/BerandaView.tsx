@@ -90,7 +90,6 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
             <span aria-hidden="true">·</span>
             <span>Blok H</span>
             <span className="text-[10px] bg-emerald-800 text-emerald-200 font-semibold px-2 py-0.5 rounded">
-              VERSI DEMO
             </span>
           </div>
 
@@ -137,7 +136,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
           <div>
             <span className="block text-emerald-300 text-[11px] font-medium">Unit Hunian Warga</span>
             <span className="text-sm sm:text-base font-bold text-white">
-              {metrics.activeHouseholds > 0 ? `${metrics.activeHouseholds} Unit Terdata [Demo]` : '[Menunggu Data Resmi]'}
+              {metrics.activeHouseholds > 0 ? `${metrics.activeHouseholds} Unit Terdata` : '[Menunggu Data Resmi]'}
             </span>
           </div>
           <div>
@@ -147,7 +146,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
             </span>
           </div>
           <div>
-            <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas [Simulasi Demo]</span>
+            <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas</span>
             <span className="text-sm sm:text-base font-bold text-white tabular-nums">
               {formatCurrency(metrics.currentBalance)}
             </span>
