@@ -1343,7 +1343,7 @@ export const DataService: IPortalDataRepository = {
       monthlyIPLExpected: iplRecap.expectedAmount,
       monthlyIPLCollected: iplRecap.collectedAmount,
       monthlyIPLOutstanding: iplRecap.outstandingAmount,
-      asOfDate: `${dateFormatted} (Simulasi Demo)`,
+      asOfDate: dateFormatted,
       isDemo: true,
     };
   },
