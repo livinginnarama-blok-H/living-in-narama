@@ -89,9 +89,6 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
       },
       newImageFile
     );
-
-    setItems((current) => [saved, ...current]);
-
     setIsAddModalOpen(false);
     setNewTitle('');
     setNewDescription('');
