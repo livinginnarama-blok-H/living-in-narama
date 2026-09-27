@@ -579,13 +579,18 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
         <div className="space-y-1.5 max-w-xl">
           <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
             <Building className="w-4 h-4 text-emerald-700" />
-            <span>Rekening Kas Paguyuban Blok H</span>
+            <span>Rekening Kas Blok H</span>
           </div>
           <p className="text-sm font-semibold text-slate-900">
-            [Bank BSI Syariah] · No. Rekening: 7292868671 [A/N Muhamad Chaqun Nazili]
+            Bank BSI Syariah
+          </p>
+          <p className="text-sm font-semibold text-slate-900">
+            No. Rekening: 7292868671
+          </p>
+          <p className="text-sm font-semibold text-slate-900">
+            Atas Nama: Muhamad Chaqun Nazili
           </p>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Atas Nama: <strong className="text-slate-800">[Kas Paguyuban Blok H - Rekening Contoh]</strong>.
             Besaran tarif iuran Rp50.000/bulan per unit + Rp.10.0000/bulan untuk Kongsi Kematian, total Rp.60.000. Pembayaran terdata akan otomatis masuk dalam buku kas.
           </p>
         </div>
