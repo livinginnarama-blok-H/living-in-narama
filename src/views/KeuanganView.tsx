@@ -405,12 +405,9 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800">
-            <Wallet className="w-4 h-4 text-emerald-700" />
-            <span>Transparansi Kas & Anggaran Warga</span>
-            <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">
-              DATA DEMO
-            </span>
-          </div>
+          <Wallet className="w-4 h-4 text-emerald-700" />
+          <span>Transparansi Kas & Anggaran Warga</span>
+        </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Laporan Keuangan & Iuran Blok H
           </h2>
@@ -517,7 +514,7 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
         {/* Card 1: Saldo Kas Terkini */}
         <div className="bg-emerald-950 text-white rounded-2xl p-5 shadow-xs space-y-1 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-800/30 rounded-full blur-xl" />
-          <span className="text-[11px] font-medium text-emerald-300 block">Saldo Kas Terkini [Demo]</span>
+          <span className="text-[11px] font-medium text-emerald-300 block">Saldo Kas Terkini</span>
           <p className="text-2xl font-black text-white tabular-nums tracking-tight">
             {formatCurrency(metrics.currentBalance)}
           </p>
@@ -531,7 +528,7 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-medium text-slate-500">
-              Pemasukan Periode Ini [Demo]
+              Pemasukan Periode Ini
             </span>
             <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
           </div>
@@ -547,7 +544,7 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-medium text-slate-500">
-              Pengeluaran Periode Ini [Demo]
+              Pengeluaran Periode Ini
             </span>
             <ArrowUpRight className="w-4 h-4 text-rose-600" />
           </div>
@@ -580,14 +577,14 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
         <div className="space-y-1.5 max-w-xl">
           <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
             <Building className="w-4 h-4 text-emerald-700" />
-            <span>Rekening Kas Paguyuban Blok H [INFORMASI DEMO]</span>
+            <span>Rekening Kas Paguyuban Blok H</span>
           </div>
           <p className="text-sm font-semibold text-slate-900">
-            [Nama Bank Contoh] · No. Rekening: 0000-0000-0000 (Data Demo)
+            [Bank BSI Syariah] · No. Rekening: 7292868671 [A/N Muhamad Chaqun Nazili]
           </p>
           <p className="text-xs text-slate-600 leading-relaxed">
             Atas Nama: <strong className="text-slate-800">[Kas Paguyuban Blok H - Rekening Contoh]</strong>.
-            Besaran tarif standar iuran Rp50.000/bulan per unit (DEMO ONLY — tarif resmi harus dikonfigurasi pengurus). Pembayaran terdata akan otomatis masuk dalam buku kas.
+            Besaran tarif iuran Rp50.000/bulan per unit + Rp.10.0000/bulan untuk Kongsi Kematian. Pembayaran terdata akan otomatis masuk dalam buku kas.
           </p>
         </div>
 
@@ -597,10 +594,10 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
             className="px-3.5 py-2 text-xs font-semibold text-emerald-900 bg-white border border-emerald-300 hover:bg-emerald-50 rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs"
           >
             {copiedBank ? <Check className="w-4 h-4 text-emerald-700" /> : <Copy className="w-4 h-4" />}
-            <span>{copiedBank ? 'Tersalin!' : 'Salin No. Rekening (Demo)'}</span>
+            <span>{copiedBank ? 'Tersalin!' : 'Salin No. Rekening'}</span>
           </button>
           <div className="px-3.5 py-2 text-xs font-semibold text-slate-600 bg-slate-100 rounded-lg">
-            <span>Kontak Bendahara: 08xxxxxxxxxx (Demo)</span>
+            <span>Kontak Bendahara: 082123251043 Muhamad Chaqun Nazili</span>
           </div>
         </div>
       </div>
