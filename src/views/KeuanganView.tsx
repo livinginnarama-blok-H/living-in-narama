@@ -195,7 +195,9 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
       paymentMap.set(p.householdId, p);
     });
 
-    return households.map((hh) => {
+    return households
+    .filter((hh) => paymentMap.has(hh.id))
+    .map((hh) => {  
       const payment = paymentMap.get(hh.id);
       const paid = payment ? payment.paidAmount : 0;
       const amount = payment ? payment.amount : DEFAULT_MONTHLY_IPL_FEE;
@@ -412,7 +414,7 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
             Laporan Keuangan & Iuran Blok H
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Buku kas transparan dan rekapitulasi iuran pengelolaan lingkungan (IPL) warga RT 04 / RW 12.
+            Buku kas transparan dan rekapitulasi iuran pengelolaan lingkungan (IPL) warga Blok H.
           </p>
         </div>
 
