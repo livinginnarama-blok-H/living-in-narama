@@ -295,9 +295,15 @@ export interface IPortalDataRepository {
   getDocumentation(): Documentation[];
   fetchDocumentation(): Promise<Documentation[]>;
   addDocumentation(
-  item: Omit<Documentation, 'id' | 'createdAt' | 'image'>,
-  imageFile: File
-): Promise<Documentation>;
+    item: Omit<Documentation, 'id' | 'createdAt' | 'image'>,
+    imageFile: File
+  ): Promise<Documentation>;
+  updateDocumentation(
+    id: string,
+    item: Partial<Omit<Documentation, 'id' | 'createdAt'>>,
+    imageFile?: File
+  ): Promise<Documentation>;
+  deleteDocumentation(id: string): Promise<void>;
 
   // Citizen Reports
   getReports(): CitizenReport[];
@@ -1472,6 +1478,206 @@ export const DataService: IPortalDataRepository = {
     emitDataChange();
 
     return documentation;
+  },
+
+    async updateDocumentation(
+    id: string,
+    item: Partial<Omit<Documentation, 'id' | 'createdAt'>>,
+    imageFile?: File
+  ): Promise<Documentation> {
+    // Ambil data lama dari database
+    const { data: existing, error: fetchError } = await supabase
+      .from('documentation')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existing) {
+      throw new Error(
+        fetchError?.message || 'Dokumentasi tidak ditemukan'
+      );
+    }
+
+    let imageUrl = existing.image_url;
+    let oldFilePath: string | null = null;
+    let newFilePath: string | null = null;
+
+    // Jika admin memilih foto baru
+    if (imageFile) {
+      const extension =
+        imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+
+      newFilePath = `${id}-${Date.now()}.${extension}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('documentation')
+        .upload(newFilePath, imageFile, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(
+          uploadError.message || 'Gagal mengunggah foto baru'
+        );
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('documentation')
+        .getPublicUrl(newFilePath);
+
+      imageUrl = publicUrlData.publicUrl;
+
+      // Ambil path foto lama untuk dihapus setelah update database berhasil
+      try {
+        const oldUrl = new URL(existing.image_url);
+        const marker = '/storage/v1/object/public/documentation/';
+        const index = oldUrl.pathname.indexOf(marker);
+
+        if (index !== -1) {
+          oldFilePath = decodeURIComponent(
+            oldUrl.pathname.substring(index + marker.length)
+          );
+        }
+      } catch {
+        oldFilePath = null;
+      }
+    }
+
+    // Update data dokumentasi
+    const { data, error } = await supabase
+      .from('documentation')
+      .update({
+        title: item.title ?? existing.title,
+        date: item.date ?? existing.date,
+        category: item.category ?? existing.category,
+        description: item.description ?? existing.description,
+        photographer: item.photographer ?? existing.photographer,
+        image_url: imageUrl,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      // Jika database gagal di-update, hapus foto baru
+      if (newFilePath) {
+        await supabase.storage
+          .from('documentation')
+          .remove([newFilePath]);
+      }
+
+      throw new Error(
+        error.message || 'Gagal memperbarui dokumentasi'
+      );
+    }
+
+    // Database berhasil → hapus foto lama
+    if (oldFilePath) {
+      const { error: storageError } = await supabase.storage
+        .from('documentation')
+        .remove([oldFilePath]);
+
+      if (storageError) {
+        console.error(
+          '[DataService] Gagal menghapus foto lama:',
+          storageError
+        );
+      }
+    }
+
+    const documentation: Documentation = {
+      id: data.id,
+      title: data.title,
+      date: data.date,
+      category: data.category,
+      description: data.description || '',
+      image: data.image_url,
+      photographer: data.photographer || '',
+      createdAt: data.created_at,
+    };
+
+    // Update local cache
+    const current = this.getDocumentation();
+
+    setStored<Documentation[]>(
+      STORAGE_KEYS.DOCUMENTATION,
+      current.map((doc) =>
+        doc.id === id ? documentation : doc
+      )
+    );
+
+    emitDataChange();
+
+    return documentation;
+  },
+
+  async deleteDocumentation(id: string): Promise<void> {
+    // Ambil data foto terlebih dahulu
+    const { data: existing, error: fetchError } = await supabase
+      .from('documentation')
+      .select('image_url')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existing) {
+      throw new Error(
+        fetchError?.message || 'Dokumentasi tidak ditemukan'
+      );
+    }
+
+    // Hapus data dari database
+    const { error: deleteError } = await supabase
+      .from('documentation')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      throw new Error(
+        deleteError.message || 'Gagal menghapus dokumentasi'
+      );
+    }
+
+    // Hapus file foto dari Storage
+    try {
+      const imageUrl = new URL(existing.image_url);
+      const marker = '/storage/v1/object/public/documentation/';
+      const index = imageUrl.pathname.indexOf(marker);
+
+      if (index !== -1) {
+        const filePath = decodeURIComponent(
+          imageUrl.pathname.substring(index + marker.length)
+        );
+
+        if (filePath) {
+          const { error: storageError } = await supabase.storage
+            .from('documentation')
+            .remove([filePath]);
+
+          if (storageError) {
+            console.error(
+              '[DataService] Gagal menghapus foto dari Storage:',
+              storageError
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.error(
+        '[DataService] Gagal memproses URL foto:',
+        error
+      );
+    }
+
+    // Hapus dari local cache
+    const current = this.getDocumentation();
+
+    setStored<Documentation[]>(
+      STORAGE_KEYS.DOCUMENTATION,
+      current.filter((doc) => doc.id !== id)
+    );
+
+    emitDataChange();
   },
   // ==========================================
   // 8. CITIZEN REPORTS & SUGGESTIONS

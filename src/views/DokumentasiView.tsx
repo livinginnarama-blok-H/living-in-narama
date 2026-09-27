@@ -1,54 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import { DocumentationItem } from '../types/portal';
 import { DataService } from '../services/dataService';
-import { Camera, Calendar, User, Plus, X, ZoomIn, Image as ImageIcon } from 'lucide-react';
+import {
+  Camera,
+  User,
+  Plus,
+  X,
+  ZoomIn,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 
 interface DokumentasiViewProps {
   isAdmin: boolean;
 }
 
 export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => {
-  const [items, setItems] = useState<DocumentationItem[]>(() => DataService.getDocumentation());
+    const [items, setItems] = useState<DocumentationItem[]>(
+    () => DataService.getDocumentation()
+  );
   const [activeCategory, setActiveCategory] = useState<string>('semua');
-  const [selectedPhoto, setSelectedPhoto] = useState<DocumentationItem | null>(null);
+  const [selectedPhoto, setSelectedPhoto] =
+    useState<DocumentationItem | null>(null);
 
-  // Subscribe to centralized DataService
-  useEffect(() => {
-  let mounted = true;
-
-  const loadDocumentation = async () => {
-    try {
-      const data = await DataService.fetchDocumentation();
-
-      if (mounted) {
-        setItems(data);
-      }
-    } catch (error) {
-      console.error('Gagal memuat dokumentasi:', error);
-    }
-  };
-
-  loadDocumentation();
-
-  const unsubscribe = DataService.subscribe(() => {
-    if (mounted) {
-      setItems(DataService.getDocumentation());
-    }
-  });
-
-  return () => {
-    mounted = false;
-    unsubscribe();
-  };
-}, []);
   // Admin Add Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // Admin Edit Modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] =
+    useState<DocumentationItem | null>(null);
+
+  // Delete
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Add form
   const [newTitle, setNewTitle] = useState('');
-  const [newCategory, setNewCategory] = useState<DocumentationItem['category']>('kerja-bakti');
+  const [newCategory, setNewCategory] =
+    useState<DocumentationItem['category']>('kerja-bakti');
   const [newDate, setNewDate] = useState('September 2026');
   const [newDescription, setNewDescription] = useState('');
- const [newImageFile, setNewImageFile] = useState<File | null>(null);
-  const [newPhotographer, setNewPhotographer] = useState('Warga Blok H');
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [newPhotographer, setNewPhotographer] =
+    useState('Warga Blok H');
+
+  // Edit form
+  const [editTitle, setEditTitle] = useState('');
+  const [editCategory, setEditCategory] =
+    useState<DocumentationItem['category']>('kerja-bakti');
+  const [editDate, setEditDate] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editPhotographer, setEditPhotographer] = useState('');
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+
+  // Status
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -64,50 +69,139 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
     if (activeCategory === 'semua') return true;
     return item.category === activeCategory;
   });
+      const handleAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const handleAddSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    if (!newTitle.trim()) return;
 
-  if (!newTitle.trim()) return;
+    if (!newImageFile) {
+      setErrorMessage('Silakan pilih foto dokumentasi terlebih dahulu.');
+      return;
+    }
 
-  if (!newImageFile) {
-    setErrorMessage('Silakan pilih foto dokumentasi terlebih dahulu.');
-    return;
-  }
+    try {
+      setIsSaving(true);
+      setErrorMessage('');
 
-  try {
-    setIsSaving(true);
+      await DataService.addDocumentation(
+        {
+          title: newTitle.trim(),
+          category: newCategory,
+          date: newDate,
+          description: newDescription,
+          photographer: newPhotographer,
+        },
+        newImageFile
+      );
+
+      setIsAddModalOpen(false);
+      setNewTitle('');
+      setNewDescription('');
+      setNewImageFile(null);
+      setNewPhotographer('Warga Blok H');
+    } catch (error) {
+      console.error('Gagal menyimpan dokumentasi:', error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Gagal menyimpan dokumentasi.'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditOpen = (item: DocumentationItem) => {
+    setEditingItem(item);
+    setEditTitle(item.title);
+    setEditCategory(item.category);
+    setEditDate(item.date);
+    setEditDescription(item.description);
+    setEditPhotographer(item.photographer);
+    setEditImageFile(null);
     setErrorMessage('');
+    setSelectedPhoto(null);
+    setIsEditModalOpen(true);
+  };
 
-    const saved = await DataService.addDocumentation(
-      {
-        title: newTitle.trim(),
-        category: newCategory,
-        date: newDate,
-        description: newDescription,
-        photographer: newPhotographer,
-      },
-      newImageFile
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!editingItem) return;
+
+    try {
+      setIsSaving(true);
+      setErrorMessage('');
+
+      const updated = await DataService.updateDocumentation(
+        editingItem.id,
+        {
+          title: editTitle.trim(),
+          category: editCategory,
+          date: editDate,
+          description: editDescription,
+          photographer: editPhotographer,
+        },
+        editImageFile || undefined
+      );
+
+      setItems((current) =>
+        current.map((item) =>
+          item.id === updated.id ? updated : item
+        )
+      );
+
+      setIsEditModalOpen(false);
+      setEditingItem(null);
+      setEditImageFile(null);
+    } catch (error) {
+      console.error('Gagal memperbarui dokumentasi:', error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Gagal memperbarui dokumentasi.'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (item: DocumentationItem) => {
+    const confirmed = window.confirm(
+      `Hapus dokumentasi "${item.title}"?\n\nFoto dan data dokumentasi ini akan dihapus dari website.`
     );
-    setIsAddModalOpen(false);
-    setNewTitle('');
-    setNewDescription('');
-    setNewImageFile(null);
-    setNewPhotographer('Warga Blok H');
-  } catch (error) {
-    console.error('Gagal menyimpan dokumentasi:', error);
 
-    setErrorMessage(
-      error instanceof Error
-        ? error.message
-        : 'Gagal menyimpan dokumentasi.'
-    );
-  } finally {
-    setIsSaving(false);
-  }
-};
+    if (!confirmed) return;
 
-  return (
+    try {
+      setIsDeleting(true);
+      setErrorMessage('');
+
+      await DataService.deleteDocumentation(item.id);
+
+      setItems((current) =>
+        current.filter((doc) => doc.id !== item.id)
+      );
+
+      if (selectedPhoto?.id === item.id) {
+        setSelectedPhoto(null);
+      }
+    } catch (error) {
+      console.error('Gagal menghapus dokumentasi:', error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Gagal menghapus dokumentasi.'
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+    return (
     <div className="space-y-6">
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
@@ -152,7 +246,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
         ))}
       </div>
 
-      {/* Photos Grid */}
+          {/* Photos Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredItems.map((item) => (
           <article
@@ -160,7 +254,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
             onClick={() => setSelectedPhoto(item)}
             className="group bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer hover:border-emerald-600/40 hover:shadow-md transition-all flex flex-col justify-between"
           >
-            {/* Image Container with Fallback */}
+            {/* Image Container */}
             <div className="relative aspect-4/3 overflow-hidden bg-emerald-950">
               <img
                 src={item.image}
@@ -168,6 +262,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
+
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                 <span className="text-white text-xs font-medium flex items-center gap-1.5">
                   <ZoomIn className="w-4 h-4 text-emerald-300" />
@@ -183,29 +278,65 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                   <span className="uppercase font-semibold text-emerald-800">
                     {item.category.replace('-', ' ')}
                   </span>
+
                   <span aria-hidden="true">·</span>
+
                   <span>{item.date}</span>
                 </div>
+
                 <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-emerald-900 transition-colors leading-snug">
                   {item.title}
                 </h3>
+
                 <p className="text-xs text-slate-600 mt-1 line-clamp-2 leading-relaxed">
                   {item.description}
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <div className="flex items-center gap-1">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="truncate max-w-[140px]">{item.photographer}</span>
+              {/* Footer */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1 text-[11px] text-slate-500 min-w-0">
+                  <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+
+                  <span className="truncate max-w-[120px]">
+                    {item.photographer}
+                  </span>
                 </div>
-                <span className="text-emerald-800 font-medium">Griya Adika Narama</span>
+
+                {isAdmin ? (
+                  <div
+                    className="flex items-center gap-1 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleEditOpen(item)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                      title="Edit dokumentasi"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item)}
+                      disabled={isDeleting}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                      title="Hapus dokumentasi"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-emerald-800 font-medium text-[11px]">
+                    Griya Adika Narama
+                  </span>
+                )}
               </div>
             </div>
           </article>
         ))}
       </div>
-
       {/* Lightbox Modal */}
       {selectedPhoto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
