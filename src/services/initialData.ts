@@ -25,61 +25,8 @@ import {
 
 export const INITIAL_ANNOUNCEMENTS: Announcement[] = [];
 
-export const INITIAL_AGENDAS: AgendaItem[] = [
-  {
-    id: 'ag-1',
-    title: '[Demo] Gotong Royong Kebersihan Saluran Air (Contoh Kegiatan)',
-    date: '2026-09-27',
-    time: '07:30 - 10:00 WIB',
-    location: 'Area Terbuka Blok H (Contoh Lokasi)',
-    category: 'kerja-bakti',
-    description:
-      '(Contoh Agenda) Gotong royong berkala warga untuk membersihkan saluran air dan merapikan area rumput fasilitas bersama. Jadwal aktual akan disesuaikan dengan pengumuman resmi paguyuban.',
-    pic: 'Bpk. Contoh 01',
-    status: 'upcoming',
-    createdAt: '2026-09-20T10:00:00.000Z',
-  },
-  {
-    id: 'ag-2',
-    title: '[Demo] Musyawarah Warga & Pembahasan Evaluasi Lingkungan (Contoh)',
-    date: '2026-10-04',
-    time: '19:30 - 21:00 WIB',
-    location: 'Area Pertemuan Blok H (Contoh Lokasi)',
-    category: 'rapat',
-    description:
-      '(Contoh Agenda) Pertemuan warga untuk membahas program kerja kepengurusan, transparansi kas, dan usulan fasilitas lingkungan bersama.',
-    pic: 'Bpk. Contoh 02',
-    status: 'upcoming',
-    createdAt: '2026-09-21T11:00:00.000Z',
-  },
-  {
-    id: 'ag-3',
-    title: '[Demo] Simulasi Pelayanan Kesehatan Lingkungan (Contoh)',
-    date: '2026-10-10',
-    time: '08:30 - 11:00 WIB',
-    location: 'Balai Pertemuan Lingkungan (Contoh Lokasi)',
-    category: 'posyandu',
-    description:
-      '(Contoh Agenda) Layanan pemeriksaan kesehatan berkala bagi warga. Pelaksanaan aktual akan dikoordinasikan bersama tenaga kesehatan terkait.',
-    pic: 'Ibu Contoh 01',
-    status: 'upcoming',
-    createdAt: '2026-09-22T08:30:00.000Z',
-  },
-  {
-    id: 'ag-4',
-    title: '[Demo] Jalan Pagi Bersama Warga Lingkungan (Contoh)',
-    date: '2026-09-13',
-    time: '06:00 - 07:30 WIB',
-    location: 'Jalur Kompleks Blok H (Contoh Lokasi)',
-    category: 'olahraga',
-    description:
-      '(Contoh Agenda) Olahraga jalan santai pagi mengelilingi area kompleks untuk mempererat silaturahmi antarwarga.',
-    pic: 'Bpk. Contoh 03',
-    status: 'completed',
-    createdAt: '2026-09-08T06:00:00.000Z',
-  },
-];
-
+export const INITIAL_AGENDAS: AgendaItem[] = [];
+  
 export const INITIAL_WORK_PROGRAMS: WorkProgram[] = [
   {
     id: 'wp-1',
@@ -300,51 +247,8 @@ export const INITIAL_DOCUMENTATION: DocumentationItem[] = [
   },
 ];
 
-export const RONDA_SCHEDULES: RondaSchedule[] = [
-  {
-    day: 'Senin',
-    team: 'Regu Contoh 1 [Demo]',
-    coordinator: 'Bpk. Contoh 01',
-    houses: ['Contoh H-01', 'Contoh H-02', 'Contoh H-03', 'Contoh H-04', 'Contoh H-05'],
-  },
-  {
-    day: 'Selasa',
-    team: 'Regu Contoh 2 [Demo]',
-    coordinator: 'Bpk. Contoh 02',
-    houses: ['Contoh H-06', 'Contoh H-07', 'Contoh H-08', 'Contoh H-09', 'Contoh H-10'],
-  },
-  {
-    day: 'Rabu',
-    team: 'Regu Contoh 3 [Demo]',
-    coordinator: 'Bpk. Contoh 03',
-    houses: ['Contoh H-11', 'Contoh H-12', 'Contoh H-13', 'Contoh H-14', 'Contoh H-15'],
-  },
-  {
-    day: 'Kamis',
-    team: 'Regu Contoh 4 [Demo]',
-    coordinator: 'Bpk. Contoh 04',
-    houses: ['Contoh H-16', 'Contoh H-17', 'Contoh H-18', 'Contoh H-19', 'Contoh H-20'],
-  },
-  {
-    day: 'Jumat',
-    team: 'Regu Contoh 5 [Demo]',
-    coordinator: 'Bpk. Contoh 05',
-    houses: ['Contoh H-21', 'Contoh H-22', 'Contoh H-23', 'Contoh H-24', 'Contoh H-25'],
-  },
-  {
-    day: 'Sabtu',
-    team: 'Regu Contoh 6 [Demo]',
-    coordinator: 'Bpk. Contoh 06',
-    houses: ['Contoh H-26', 'Contoh H-27', 'Contoh H-28', 'Contoh H-29', 'Contoh H-30'],
-  },
-  {
-    day: 'Minggu',
-    team: 'Regu Contoh 7 [Demo]',
-    coordinator: 'Bpk. Contoh 07',
-    houses: ['Contoh H-31', 'Contoh H-32', 'Contoh H-33', 'Contoh H-34', 'Contoh H-35'],
-  },
-];
-
+export const RONDA_SCHEDULES: RondaSchedule[] = [];
+  
 export const INITIAL_REPORTS: CitizenReport[] = [
   {
     id: 'rep-1',

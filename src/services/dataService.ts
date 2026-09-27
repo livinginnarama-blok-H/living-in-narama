@@ -22,7 +22,7 @@
  *    - Sinkronisasi Void Transaksi: Membatalkan transaksi kas yang terhubung ke IPL akan otomatis menghitung ulang total pembayaran aktif (SUM transaksi aktif) dan memperbarui status IPL secara konsisten.
  *    - Atomic Batch Worker: Eksekusi D1 pada Worker menggunakan env.DB.batch([...]) untuk atomisitas transaksi.
  */
-
+import { supabase } from '../lib/supabase';
 import {
   Announcement,
   EventAgenda,
@@ -393,82 +393,109 @@ export const DataService: IPortalDataRepository = {
     setStored(STORAGE_KEYS.ANNOUNCEMENTS, updated);
     emitDataChange();
   },
+  // ==========================================
+  // 2. AGENDAS & EVENTS - SUPABASE
+  // ==========================================
 
-  // ==========================================
-  // 2. AGENDAS & EVENTS
-  // ==========================================
   getAgendas(): EventAgenda[] {
-    return getStored<EventAgenda[]>(STORAGE_KEYS.AGENDAS, INITIAL_AGENDAS);
+    // Agenda tidak lagi mengambil data dari localStorage.
+    // Data diisi oleh fetchAgendas() dari Supabase.
+    return getStored<EventAgenda[]>('__agenda_supabase_cache__', []);
   },
 
   async fetchAgendas(): Promise<EventAgenda[]> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<EventAgenda[]>>('/agendas');
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal memuat agenda dari Worker API');
-        }
-        return json.data || [];
-      } catch (err) {
-        console.error('[DataService] Worker fetchAgendas error:', err);
-        throw err;
-      }
+    const { data, error } = await supabase
+      .from('agendas')
+      .select('*')
+      .order('date', { ascending: true })
+      .order('time', { ascending: true });
+
+    if (error) {
+      console.error('[DataService] Supabase fetchAgendas error:', error);
+      throw new Error(error.message || 'Gagal memuat agenda dari Supabase');
     }
-    return this.getAgendas();
+
+    const agendas: EventAgenda[] = (data || []).map((item) => ({
+      id: item.id,
+      title: item.title,
+      date: item.date,
+      time: item.time,
+      location: item.location,
+      category: item.category,
+      description: item.description || '',
+      pic: item.pic || '',
+      status: item.status,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    }));
+
+    setStored<EventAgenda[]>('__agenda_supabase_cache__', agendas);
+    return agendas;
   },
 
-  async addAgenda(item: Omit<EventAgenda, 'id' | 'createdAt'>): Promise<EventAgenda> {
+  async addAgenda(
+    item: Omit<EventAgenda, 'id' | 'createdAt'>
+  ): Promise<EventAgenda> {
     const newItem: EventAgenda = {
       ...item,
       id: generateSafeId('ag'),
       createdAt: new Date().toISOString(),
     };
 
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<EventAgenda>>('/agendas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newItem),
-        });
-        if (!json.success || !json.data) {
-          throw new Error(json.error || 'Gagal menambah agenda via Worker API');
-        }
-        emitDataChange();
-        return json.data;
-      } catch (err) {
-        console.error('[DataService] Worker addAgenda error:', err);
-        throw err;
-      }
+    const { data, error } = await supabase
+      .from('agendas')
+      .insert({
+        id: newItem.id,
+        title: newItem.title,
+        date: newItem.date,
+        time: newItem.time,
+        location: newItem.location,
+        category: newItem.category,
+        description: newItem.description,
+        pic: newItem.pic,
+        status: newItem.status,
+        created_at: newItem.createdAt,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DataService] Supabase addAgenda error:', error);
+      throw new Error(error.message || 'Gagal menambah agenda');
     }
 
-    const current = this.getAgendas();
-    const updated = [newItem, ...current];
-    setStored(STORAGE_KEYS.AGENDAS, updated);
+    const agenda: EventAgenda = {
+      id: data.id,
+      title: data.title,
+      date: data.date,
+      time: data.time,
+      location: data.location,
+      category: data.category,
+      description: data.description || '',
+      pic: data.pic || '',
+      status: data.status,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+
+    await this.fetchAgendas();
     emitDataChange();
-    return newItem;
+
+    return agenda;
   },
 
   async deleteAgenda(id: string): Promise<void> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<{ deletedId: string }>>(`/agendas/${id}`, {
-          method: 'DELETE',
-        });
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal menghapus agenda via Worker API');
-        }
-        emitDataChange();
-        return;
-      } catch (err) {
-        console.error('[DataService] Worker deleteAgenda error:', err);
-        throw err;
-      }
+    const { error } = await supabase
+      .from('agendas')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('[DataService] Supabase deleteAgenda error:', error);
+      throw new Error(error.message || 'Gagal menghapus agenda');
     }
 
-    const current = this.getAgendas();
-    const updated = current.filter((item) => item.id !== id);
-    setStored(STORAGE_KEYS.AGENDAS, updated);
+    await this.fetchAgendas();
     emitDataChange();
   },
 

@@ -20,17 +20,55 @@ interface AgendaViewProps {
 }
 
 export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
-  const [agendas, setAgendas] = useState<AgendaItem[]>(() => DataService.getAgendas());
+  const [agendas, setAgendas] = useState<AgendaItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   const [viewTab, setViewTab] = useState<'kegiatan' | 'ronda'>('kegiatan');
   const [statusFilter, setStatusFilter] = useState<'upcoming' | 'completed' | 'all'>('upcoming');
   const rondaSchedules = DataService.getRondaSchedules();
 
-  // Subscribe to centralized DataService
-  useEffect(() => {
+    useEffect(() => {
+    let mounted = true;
+
+    const loadAgendas = async () => {
+      try {
+        setIsLoading(true);
+        setErrorMessage('');
+
+        const data = await DataService.fetchAgendas();
+
+        if (mounted) {
+          setAgendas(data);
+        }
+      } catch (error) {
+        console.error('[AgendaView] Gagal memuat agenda:', error);
+
+        if (mounted) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : 'Gagal memuat agenda'
+          );
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadAgendas();
+
     const unsubscribe = DataService.subscribe(() => {
-      setAgendas(DataService.getAgendas());
+      if (mounted) {
+        setAgendas(DataService.getAgendas());
+      }
     });
-    return unsubscribe;
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
   // Add Agenda Modal
@@ -53,33 +91,60 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
     .filter((a) => a.status === 'upcoming')
     .sort((a, b) => a.date.localeCompare(b.date))[0];
 
-  const handleAddSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
-    DataService.addAgenda({
-      title: newTitle.trim(),
-      date: newDate,
-      time: newTime,
-      location: newLocation,
-      category: newCategory,
-      pic: newPic || 'Pengurus Blok H',
-      description: newDescription,
-      status: 'upcoming',
-    });
+    try {
+  const newAgenda = await DataService.addAgenda({
+    title: newTitle.trim(),
+    date: newDate,
+    time: newTime,
+    location: newLocation,
+    category: newCategory,
+    pic: newPic || 'Pengurus Blok H',
+    description: newDescription,
+    status: 'upcoming',
+  });
 
-    setAgendas(DataService.getAgendas());
-    setIsAddModalOpen(false);
-    setNewTitle('');
-    setNewDescription('');
+  setAgendas((current) => [newAgenda, ...current]);
+
+  setIsAddModalOpen(false);
+  setNewTitle('');
+  setNewDescription('');
+  setErrorMessage('');
+} catch (error) {
+  console.error('[AgendaView] Gagal menambah agenda:', error);
+
+  setErrorMessage(
+    error instanceof Error
+      ? error.message
+      : 'Gagal menambah agenda'
+  );
+}
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Hapus agenda ini?')) {
-      DataService.deleteAgenda(id);
-      setAgendas(DataService.getAgendas());
-    }
-  };
+ const handleDelete = async (id: string) => {
+  if (!window.confirm('Hapus agenda ini?')) return;
+
+  try {
+    await DataService.deleteAgenda(id);
+
+    setAgendas((current) =>
+      current.filter((item) => item.id !== id)
+    );
+
+    setErrorMessage('');
+  } catch (error) {
+    console.error('[AgendaView] Gagal menghapus agenda:', error);
+
+    setErrorMessage(
+      error instanceof Error
+        ? error.message
+        : 'Gagal menghapus agenda'
+    );
+  }
+};
 
   const handleAddToCalendar = (item: AgendaItem) => {
     const title = encodeURIComponent(`[Warga Blok H] ${item.title}`);
@@ -100,14 +165,13 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
             <Calendar className="w-4 h-4 text-emerald-700" />
             <span>Kalender Lingkungan & Siskamling</span>
             <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">
-              DATA DEMO
             </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Agenda Kegiatan Warga
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Simulasi jadwal kegiatan gotong royong, musyawarah paguyuban, serta jadwal ronda siskamling percontohan.
+            Agenda kegiatan, informasi lingkungan, dan jadwal siskamling warga Blok H.
           </p>
         </div>
 
@@ -292,59 +356,91 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
           </div>
         </div>
       ) : (
-        /* Ronda Siskamling Tab */
+                /* Ronda Siskamling Tab */
         <div className="space-y-4">
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-xs text-emerald-900 flex items-start gap-3">
             <Shield className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+
             <div className="space-y-1">
-              <h4 className="font-bold text-sm">Informasi Jadwal Siskamling Ronda Blok H [JADWAL SIMULASI DEMO]</h4>
+              <h4 className="font-bold text-sm">
+                Informasi Jadwal Siskamling Ronda Blok H
+              </h4>
+
               <p className="leading-relaxed">
-                Jadwal ronda di bawah ini merupakan data contoh untuk keperluan uji coba fitur koordinasi keamanan warga. Jadwal aktual, regu jaga, dan nomor rumah akan disesuaikan saat sosialisasi resmi pengurus paguyuban.
+                Jadwal siskamling berikut merupakan informasi jadwal keamanan
+                lingkungan Blok H. Perubahan jadwal, regu jaga, dan nomor rumah
+                akan diperbarui oleh pengurus sesuai hasil koordinasi warga.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {rondaSchedules.map((ronda, idx) => (
-              <div
-                key={idx}
-                className="bg-white rounded-xl border border-slate-200 p-5 space-y-3 hover:border-emerald-300 transition-colors"
-              >
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-sm font-bold text-slate-900">Malam {ronda.day}</span>
-                  <span className="text-xs font-semibold text-emerald-800">{ronda.team}</span>
-                </div>
+          {rondaSchedules.length === 0 ? (
+            <div className="bg-white rounded-xl border border-slate-200 p-6 text-center">
+              <Shield className="w-8 h-8 text-emerald-700 mx-auto mb-3" />
 
-                <div className="text-xs space-y-1">
-                  <span className="text-slate-500">Koordinator Regu:</span>
-                  <p className="font-semibold text-slate-800">{ronda.coordinator}</p>
-                </div>
+              <h4 className="font-bold text-sm text-slate-900">
+                Jadwal Siskamling Belum Tersedia
+              </h4>
 
-                <div className="pt-1">
-                  <span className="text-[11px] text-slate-500 block mb-1.5">
-                    Anggota Warga Rumah:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {ronda.houses.map((house) => (
-                      <span
-                        key={house}
-                        className="px-2.5 py-1 text-xs font-mono font-semibold bg-slate-50 border border-slate-200 text-slate-800 rounded-md"
-                      >
-                        {house}
-                      </span>
-                    ))}
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-lg mx-auto">
+                Jadwal siskamling, regu jaga, dan nomor rumah akan diperbarui
+                oleh pengurus setelah hasil koordinasi dan kesepakatan warga
+                Blok H.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {rondaSchedules.map((ronda, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white rounded-xl border border-slate-200 p-5 space-y-3 hover:border-emerald-300 transition-colors"
+                >
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="text-sm font-bold text-slate-900">
+                      Malam {ronda.day}
+                    </span>
+
+                    <span className="text-xs font-semibold text-emerald-800">
+                      {ronda.team}
+                    </span>
+                  </div>
+
+                  <div className="text-xs space-y-1">
+                    <span className="text-slate-500">
+                      Koordinator Regu:
+                    </span>
+
+                    <p className="font-semibold text-slate-800">
+                      {ronda.coordinator}
+                    </p>
+                  </div>
+
+                  <div className="pt-1">
+                    <span className="text-[11px] text-slate-500 block mb-1.5">
+                      Anggota Warga Rumah:
+                    </span>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {ronda.houses.map((house) => (
+                        <span
+                          key={house}
+                          className="px-2.5 py-1 text-xs font-mono font-semibold bg-slate-50 border border-slate-200 text-slate-800 rounded-md"
+                        >
+                          {house}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 text-[11px] text-slate-400 border-t border-slate-50">
+                    Standby di Pos Satpam Blok H
                   </div>
                 </div>
-
-                <div className="pt-2 text-[11px] text-slate-400 border-t border-slate-50">
-                  Standby di Pos Satpam Blok H
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
-
       {/* Admin Add Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
