@@ -1,146 +1,195 @@
 import React from 'react';
-import { X, Phone, ShieldAlert, Ambulance, Flame, Zap, MessageSquare, AlertTriangle } from 'lucide-react';
+import {
+  X,
+  Phone,
+  ShieldAlert,
+  Ambulance,
+  Flame,
+  Zap,
+  Users,
+} from 'lucide-react';
 
 interface EmergencyModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const EmergencyModal: React.FC<EmergencyModalProps> = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
+export const EmergencyModal: React.FC<EmergencyModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
+  if (!isOpen) {
+    return null;
+  }
 
   const contacts = [
     {
-      title: 'Pos Keamanan Lingkungan (Contoh)',
-      name: 'Petugas Jaga [Data Demo]',
-      phone: '08xxxxxxxxxx',
-      desc: 'Standby di Pos Jaga Lingkungan Blok H (Data Contoh)',
+      title: 'Keamanan Lingkungan',
+      name: 'Pos Keamanan / Satpam Blok H',
+      phone: '',
+      desc: 'Untuk kebutuhan keamanan dan kondisi darurat di lingkungan Blok H',
       icon: ShieldAlert,
-      badge: 'Demo',
-      color: 'bg-emerald-50 text-emerald-900 border-emerald-200',
+      badge: 'Internal',
+      color:
+        'bg-emerald-50 text-emerald-900 border-emerald-200',
     },
     {
-      title: 'Koordinator / Pengurus Paguyuban (Contoh)',
-      name: 'Bpk. Contoh 01 [Pengurus Demo]',
-      phone: '08xxxxxxxxxx',
-      desc: 'Koordinasi perizinan dan ketertiban lingkungan (Data Contoh)',
-      icon: ShieldAlert,
-      badge: 'Demo',
-      color: 'bg-blue-50 text-blue-900 border-blue-200',
+      title: 'Pengurus Blok H',
+      name: 'Koordinator / Pengurus Paguyuban',
+      phone: '',
+      desc: 'Untuk koordinasi terkait warga, lingkungan, dan kondisi darurat',
+      icon: Users,
+      badge: 'Internal',
+      color:
+        'bg-blue-50 text-blue-900 border-blue-200',
     },
     {
-      title: 'Fasilitas Layanan Medis Terdekat (Contoh)',
-      name: 'Layanan Ambulans / Puskesmas Terdekat [Demo]',
-      phone: '119 / 08xxxxxxxxxx',
-      desc: 'Penanganan gawat darurat medis warga (Data Contoh)',
+      title: 'Layanan Medis',
+      name: 'Layanan Darurat Medis',
+      phone: '119',
+      desc: 'Untuk keadaan darurat medis dan kebutuhan pertolongan kesehatan',
       icon: Ambulance,
-      badge: 'Medis',
-      color: 'bg-rose-50 text-rose-900 border-rose-200',
+      badge: 'Publik',
+      color:
+        'bg-rose-50 text-rose-900 border-rose-200',
     },
     {
-      title: 'Pemadam Kebakaran (Damkar Publik)',
-      name: 'Pos Pemadam Kebakaran Wilayah',
+      title: 'Pemadam Kebakaran',
+      name: 'Layanan Pemadam Kebakaran',
       phone: '113',
-      desc: 'Layanan darurat kebakaran dan evakuasi kedaruratan umum',
+      desc: 'Untuk keadaan kebakaran dan kebutuhan evakuasi darurat',
       icon: Flame,
       badge: 'Publik',
-      color: 'bg-amber-50 text-amber-900 border-amber-200',
+      color:
+        'bg-amber-50 text-amber-900 border-amber-200',
     },
     {
-      title: 'Layanan Darurat Gangguan Listrik PLN',
-      name: 'Call Center Layanan Gangguan PLN',
+      title: 'Gangguan Listrik',
+      name: 'Layanan Gangguan PLN',
       phone: '123',
-      desc: 'Penanganan gangguan jaringan listrik dan kabel darurat',
+      desc: 'Untuk laporan gangguan listrik dan jaringan kelistrikan',
       icon: Zap,
-      badge: 'PLN',
-      color: 'bg-slate-50 text-slate-900 border-slate-200',
+      badge: 'Publik',
+      color:
+        'bg-slate-50 text-slate-900 border-slate-200',
     },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="emergency-modal-title"
+    >
       <div
         className="fixed inset-0"
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
+
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
         {/* Header */}
-        <div className="bg-rose-900 text-white px-5 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-rose-800 flex items-center justify-center">
-              <Phone className="w-4 h-4 text-rose-200" />
+        <div className="flex items-center justify-between bg-rose-900 px-5 py-4 text-white">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-800">
+              <Phone className="h-4 w-4 text-rose-200" />
             </div>
+
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold">Kontak Penting & Darurat</h3>
-                <span className="text-[10px] bg-rose-800 text-rose-200 font-semibold px-2 py-0.5 rounded">
-                  DATA DEMO
-                </span>
-              </div>
-              <p className="text-xs text-rose-200">Griya Adika Narama Blok H</p>
+              <h3
+                id="emergency-modal-title"
+                className="text-base font-bold"
+              >
+                Kontak Penting & Darurat
+              </h3>
+
+              <p className="mt-0.5 text-xs text-rose-200">
+                Griya Adika Narama Blok H
+              </p>
             </div>
           </div>
+
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-rose-200 hover:text-white hover:bg-rose-800 transition-colors"
+            className="rounded-lg p-1.5 text-rose-200 transition-colors hover:bg-rose-800 hover:text-white"
+            aria-label="Tutup kontak darurat"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* List of contacts */}
-        <div className="p-4 sm:p-5 overflow-y-auto space-y-3">
-          {/* Demo Notice Banner */}
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-            <p className="leading-relaxed">
-              <strong>Pemberitahuan Demo:</strong> Nomor kontak personal berformat <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">08xxxxxxxxxx</code> merupakan data simulasi untuk keperluan prototipe portal. Kontak resmi pengurus dan satpam akan diperbarui saat situs resmi diluncurkan.
-            </p>
-          </div>
+        {/* Informasi */}
+        <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
+          <p className="text-xs leading-relaxed text-slate-600">
+            Gunakan kontak berikut sesuai dengan kebutuhan.
+            Untuk kondisi yang mengancam keselamatan jiwa,
+            segera hubungi layanan darurat publik.
+          </p>
+        </div>
 
-          {contacts.map((c, i) => {
-            const Icon = c.icon;
+        {/* Daftar Kontak */}
+        <div className="space-y-3 overflow-y-auto p-4 sm:p-5">
+          {contacts.map((contact) => {
+            const Icon = contact.icon;
+            const isAvailable = contact.phone !== '';
+
             return (
               <div
-                key={i}
-                className={`p-3.5 rounded-xl border ${c.color} transition-all`}
+                key={contact.title}
+                className={
+                  'rounded-xl border p-3.5 transition-all hover:shadow-sm ' +
+                  contact.color
+                }
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-white shadow-xs shrink-0 mt-0.5">
-                      <Icon className="w-4 h-4" />
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white shadow-xs">
+                    <Icon className="h-4 w-4" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-sm font-bold text-slate-900">
+                        {contact.title}
+                      </h4>
+
+                      <span className="rounded bg-white/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                        {contact.badge}
+                      </span>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-slate-900">{c.title}</h4>
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase">
-                          {c.badge}
-                        </span>
-                      </div>
-                      <p className="text-xs font-medium text-slate-700 mt-0.5">{c.name}</p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">{c.desc}</p>
-                    </div>
+
+                    <p className="mt-0.5 text-xs font-semibold text-slate-700">
+                      {contact.name}
+                    </p>
+
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                      {contact.desc}
+                    </p>
                   </div>
                 </div>
 
-                <div className="mt-3 pt-2.5 border-t border-black/5 flex items-center justify-between gap-2">
-                  <span className="text-xs font-mono font-bold text-slate-800">{c.phone}</span>
-                  <div className="flex items-center gap-1.5">
-                    {c.phone.startsWith('08') ? (
-                      <span className="text-[11px] text-slate-500 bg-white/80 border border-slate-200 px-2 py-0.5 rounded">
-                        Simulasi Demo
-                      </span>
-                    ) : (
-                      <a
-                        href={`tel:${c.phone}`}
-                        className="px-2.5 py-1 text-xs font-medium bg-slate-800 hover:bg-slate-900 text-white rounded-md flex items-center gap-1 transition-colors"
-                      >
-                        <Phone className="w-3 h-3" />
-                        <span>Panggil Darurat</span>
-                      </a>
-                    )}
-                  </div>
+                {/* Nomor Telepon */}
+                <div className="mt-3 flex items-center justify-between gap-3 border-t border-black/5 pt-2.5">
+                  {isAvailable ? (
+                    <span className="font-mono text-sm font-bold text-slate-800">
+                      {contact.phone}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-medium text-slate-500">
+                      Nomor kontak belum diperbarui
+                    </span>
+                  )}
+
+                  {isAvailable && (
+                    <a
+                      href={'tel:' + contact.phone}
+                      className="flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-900"
+                    >
+                      <Phone className="h-3 w-3" />
+                      <span>Telepon</span>
+                    </a>
+                  )}
                 </div>
               </div>
             );
@@ -148,12 +197,13 @@ export const EmergencyModal: React.FC<EmergencyModalProps> = ({ isOpen, onClose 
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-200 text-center">
+        <div className="border-t border-slate-200 bg-slate-50 p-3">
           <button
+            type="button"
             onClick={onClose}
-            className="w-full py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
+            className="w-full rounded-lg border border-slate-300 bg-white py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100"
           >
-            Tutup Jendela
+            Tutup
           </button>
         </div>
       </div>
