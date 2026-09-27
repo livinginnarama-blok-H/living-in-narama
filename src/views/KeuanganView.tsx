@@ -582,13 +582,13 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
             <span>Rekening Kas Blok H</span>
           </div>
           <p className="text-sm font-semibold text-slate-900">
-            Bank BSI Syariah
+            Bank : BSI Syariah
           </p>
           <p className="text-sm font-semibold text-slate-900">
-            No. Rekening: 7292868671
+            No. Rekening : 7292868671
           </p>
           <p className="text-sm font-semibold text-slate-900">
-            Atas Nama: Muhamad Chaqun Nazili
+            Atas Nama : Muhamad Chaqun Nazili
           </p>
           <p className="text-xs text-slate-600 leading-relaxed">
             Besaran tarif iuran Rp50.000/bulan per unit + Rp.10.0000/bulan untuk Kongsi Kematian, total Rp.60.000. Pembayaran terdata akan otomatis masuk dalam buku kas.
