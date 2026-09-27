@@ -390,7 +390,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {rondaSchedules.map((ronda, idx) => (
+              {rondaSchedules.filter(Boolean).map((ronda, idx) => (
                 <div
                   key={idx}
                   className="bg-white rounded-xl border border-slate-200 p-5 space-y-3 hover:border-emerald-300 transition-colors"
