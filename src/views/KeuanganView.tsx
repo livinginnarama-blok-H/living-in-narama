@@ -230,7 +230,7 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
   };
 
   const handleCopyAccount = () => {
-    navigator.clipboard.writeText('0000000000');
+    navigator.clipboard.writeText('7292868671');
     setCopiedBank(true);
     setTimeout(() => setCopiedBank(false), 2000);
   };
@@ -584,7 +584,7 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
           </p>
           <p className="text-xs text-slate-600 leading-relaxed">
             Atas Nama: <strong className="text-slate-800">[Kas Paguyuban Blok H - Rekening Contoh]</strong>.
-            Besaran tarif iuran Rp50.000/bulan per unit + Rp.10.0000/bulan untuk Kongsi Kematian. Pembayaran terdata akan otomatis masuk dalam buku kas.
+            Besaran tarif iuran Rp50.000/bulan per unit + Rp.10.0000/bulan untuk Kongsi Kematian, total Rp.60.000. Pembayaran terdata akan otomatis masuk dalam buku kas.
           </p>
         </div>
 
