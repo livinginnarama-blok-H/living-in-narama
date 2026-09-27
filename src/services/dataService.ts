@@ -1612,21 +1612,22 @@ export const DataService: IPortalDataRepository = {
     return documentation;
   },
 
-  async deleteDocumentation(id: string): Promise<void> {
-    // Ambil data foto terlebih dahulu
+    async deleteDocumentation(id: string): Promise<void> {
+    // Cari data foto terlebih dahulu.
+    // maybeSingle() mencegah error 406 jika data sudah tidak ada.
     const { data: existing, error: fetchError } = await supabase
       .from('documentation')
       .select('image_url')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (fetchError || !existing) {
+    if (fetchError) {
       throw new Error(
-        fetchError?.message || 'Dokumentasi tidak ditemukan'
+        fetchError.message || 'Gagal mencari dokumentasi'
       );
     }
 
-    // Hapus data dari database
+    // Hapus data dari database jika masih ada
     const { error: deleteError } = await supabase
       .from('documentation')
       .delete()
@@ -1638,38 +1639,45 @@ export const DataService: IPortalDataRepository = {
       );
     }
 
-    // Hapus file foto dari Storage
-    try {
-      const imageUrl = new URL(existing.image_url);
-      const marker = '/storage/v1/object/public/documentation/';
-      const index = imageUrl.pathname.indexOf(marker);
+    // Jika data database memiliki foto,
+    // coba hapus file foto dari Storage.
+    if (existing?.image_url) {
+      try {
+        const imageUrl = new URL(existing.image_url);
+        const marker =
+          '/storage/v1/object/public/documentation/';
+        const index = imageUrl.pathname.indexOf(marker);
 
-      if (index !== -1) {
-        const filePath = decodeURIComponent(
-          imageUrl.pathname.substring(index + marker.length)
-        );
+        if (index !== -1) {
+          const filePath = decodeURIComponent(
+            imageUrl.pathname.substring(
+              index + marker.length
+            )
+          );
 
-        if (filePath) {
-          const { error: storageError } = await supabase.storage
-            .from('documentation')
-            .remove([filePath]);
+          if (filePath) {
+            const { error: storageError } =
+              await supabase.storage
+                .from('documentation')
+                .remove([filePath]);
 
-          if (storageError) {
-            console.error(
-              '[DataService] Gagal menghapus foto dari Storage:',
-              storageError
-            );
+            if (storageError) {
+              console.error(
+                '[DataService] Gagal menghapus foto dari Storage:',
+                storageError
+              );
+            }
           }
         }
+      } catch (error) {
+        console.error(
+          '[DataService] Gagal memproses URL foto:',
+          error
+        );
       }
-    } catch (error) {
-      console.error(
-        '[DataService] Gagal memproses URL foto:',
-        error
-      );
     }
 
-    // Hapus dari local cache
+    // Bersihkan local cache
     const current = this.getDocumentation();
 
     setStored<Documentation[]>(
