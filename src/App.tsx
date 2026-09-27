@@ -22,7 +22,11 @@ import { DokumentasiView } from './views/DokumentasiView';
 import { AdminView } from './views/AdminView';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabKey>('beranda');
+  const [activeTab, setActiveTab] = useState<TabKey>(() => {
+  const savedTab = localStorage.getItem('narama_active_tab');
+
+  return (savedTab as TabKey) || 'beranda';
+});
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -45,14 +49,16 @@ export default function App() {
 
   // Scroll to top on tab change
   const handleSelectTab = (tab: TabKey) => {
-    setActiveTab(tab);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  setActiveTab(tab);
+  localStorage.setItem('narama_active_tab', tab);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
- const handleLogout = async () => {
+  const handleLogout = async () => {
   await AuthService.logout();
+  localStorage.setItem('narama_active_tab', 'beranda');
   setActiveTab('beranda');
-};
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f6f9f6] text-slate-800 font-sans selection:bg-emerald-200 selection:text-emerald-900">
