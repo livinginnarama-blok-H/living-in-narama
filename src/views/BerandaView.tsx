@@ -48,7 +48,10 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
   // Find today's ronda team
   const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
   const todayName = dayNames[new Date().getDay()];
-  const todayRonda = rondaSchedules.find((r) => r.day.toLowerCase() === todayName.toLowerCase()) || rondaSchedules[0];
+  const todayRonda =
+  rondaSchedules.find(
+    (r) => r.day.toLowerCase() === todayName.toLowerCase()
+  ) || null;
 
   const pinnedAnnouncement = announcements.find((a) => a.isPinned) || announcements[0];
   const upcomingAgendas = agendas.filter((a) => a.status === 'upcoming').slice(0, 2);
@@ -298,39 +301,75 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-emerald-700" />
-                <h3 className="text-sm font-bold text-slate-900">Jadwal Siskamling Ronda</h3>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Jadwal Siskamling Ronda
+                </h3>
               </div>
-              <span className="text-xs font-semibold text-emerald-700">Hari {todayRonda.day}</span>
-            </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800">{todayRonda.team}</span>
-                <span className="text-[10px] text-emerald-800 font-medium px-2 py-0.5 bg-emerald-100 rounded-md">
-                  Pukul 22.00 - 04.00
+              {todayRonda && (
+                <span className="text-xs font-semibold text-emerald-700">
+                  Hari {todayRonda.day}
                 </span>
-              </div>
-              <p className="text-xs text-slate-600">
-                Koordinator: <span className="font-medium text-slate-900">{todayRonda.coordinator}</span>
-              </p>
-              <div className="pt-1">
-                <span className="text-[11px] text-slate-500 block mb-1">Anggota Warga Rumah:</span>
-                <div className="flex flex-wrap gap-1">
-                  {todayRonda.houses.map((house) => (
-                    <span
-                      key={house}
-                      className="px-2 py-0.5 text-[11px] font-mono font-semibold bg-white border border-slate-200 text-slate-700 rounded"
-                    >
-                      {house}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
 
-            <p className="text-[11px] text-slate-500 leading-normal">
-              Titik kumpul: Pos Portal Utama Blok H bersama petugas satpam jaga.
-            </p>
+            {todayRonda ? (
+              <>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800">
+                      {todayRonda.team}
+                    </span>
+
+                    <span className="text-[10px] text-emerald-800 font-medium px-2 py-0.5 bg-emerald-100 rounded-md">
+                      Pukul 22.00 - 04.00
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600">
+                    Koordinator:{' '}
+                    <span className="font-medium text-slate-900">
+                      {todayRonda.coordinator}
+                    </span>
+                  </p>
+
+                  <div className="pt-1">
+                    <span className="text-[11px] text-slate-500 block mb-1">
+                      Anggota Warga Rumah:
+                    </span>
+
+                    <div className="flex flex-wrap gap-1">
+                      {todayRonda.houses.map((house) => (
+                        <span
+                          key={house}
+                          className="px-2 py-0.5 text-[11px] font-mono font-semibold bg-white border border-slate-200 text-slate-700 rounded"
+                        >
+                          {house}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-500 leading-normal">
+                  Titik kumpul: Pos Portal Utama Blok H bersama petugas satpam
+                  jaga.
+                </p>
+              </>
+            ) : (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-center">
+                <Shield className="w-7 h-7 text-emerald-700 mx-auto mb-2" />
+
+                <p className="text-xs font-bold text-slate-900">
+                  Jadwal Siskamling Belum Tersedia
+                </p>
+
+                <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                  Jadwal ronda akan diperbarui oleh pengurus setelah hasil
+                  koordinasi dan kesepakatan warga Blok H.
+                </p>
+              </div>
+            )}
           </div>
 
           <button
