@@ -442,18 +442,7 @@ const kosongCount = activeHouseholds.filter(
           <span>Pengaturan Data Mock</span>
         </button>
       </div>
-      <button
-        onClick={() => setAdminTab('warga')}
-        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
-          adminTab === 'warga'
-            ? 'bg-emerald-800 text-white'
-            : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
-        }`}
-      >
-        <Users className="w-3.5 h-3.5" />
-        <span>Data Warga ({activeHouseholds.length})</span>
-      </button>
-      {/* Tab 1: Aspirasi & Laporan Warga */}
+           {/* Tab 1: Aspirasi & Laporan Warga */}
       {adminTab === 'laporan' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
