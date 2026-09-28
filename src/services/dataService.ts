@@ -331,77 +331,113 @@ export const DataService: IPortalDataRepository = {
   getAnnouncements(): Announcement[] {
     return getStored<Announcement[]>(STORAGE_KEYS.ANNOUNCEMENTS, INITIAL_ANNOUNCEMENTS);
   },
-
   async fetchAnnouncements(): Promise<Announcement[]> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<Announcement[]>>('/announcements');
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal memuat pengumuman dari Worker API');
-        }
-        return json.data || [];
-      } catch (err) {
-        console.error('[DataService] Worker fetchAnnouncements error:', err);
-        throw err;
-      }
-    }
-    return this.getAnnouncements();
-  },
+  const { data, error } = await supabase
+    .from('announcements')
+    .select('*')
+    .order('is_pinned', { ascending: false })
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false });
 
+  if (error) {
+    console.error('[DataService] Supabase fetchAnnouncements error:', error);
+    throw new Error(error.message || 'Gagal memuat pengumuman dari Supabase');
+  }
+
+  const announcements: Announcement[] = (data || []).map((item) => ({
+    id: item.id,
+    title: item.title,
+    category: item.category,
+    date: item.date,
+    author: item.author,
+    content: item.content,
+    isPinned: item.is_pinned,
+    tagline: item.tagline || undefined,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  }));
+
+  setStored<Announcement[]>(
+    STORAGE_KEYS.ANNOUNCEMENTS,
+    announcements
+  );
+
+  emitDataChange();
+
+  return announcements;
+},
   async addAnnouncement(item: Omit<Announcement, 'id' | 'createdAt'>): Promise<Announcement> {
-    const newItem: Announcement = {
-      ...item,
-      id: generateSafeId('ann'),
-      createdAt: new Date().toISOString(),
-    };
+  const newItem: Announcement = {
+    ...item,
+    id: generateSafeId('ann'),
+    createdAt: new Date().toISOString(),
+  };
 
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<Announcement>>('/announcements', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newItem),
-        });
-        if (!json.success || !json.data) {
-          throw new Error(json.error || 'Gagal menambah pengumuman via Worker API');
-        }
-        emitDataChange();
-        return json.data;
-      } catch (err) {
-        console.error('[DataService] Worker addAnnouncement error:', err);
-        throw err;
-      }
-    }
+  const { data, error } = await supabase
+    .from('announcements')
+    .insert({
+      id: newItem.id,
+      title: newItem.title,
+      category: newItem.category,
+      date: newItem.date,
+      author: newItem.author,
+      content: newItem.content,
+      is_pinned: newItem.isPinned,
+      tagline: newItem.tagline ?? null,
+      created_at: newItem.createdAt,
+    })
+    .select()
+    .single();
 
-    const current = this.getAnnouncements();
-    const updated = [newItem, ...current];
-    setStored(STORAGE_KEYS.ANNOUNCEMENTS, updated);
-    emitDataChange();
-    return newItem;
-  },
+  if (error) {
+    console.error('[DataService] Supabase addAnnouncement error:', error);
+    throw new Error(error.message || 'Gagal menambah pengumuman ke Supabase');
+  }
 
+  const created: Announcement = {
+    id: data.id,
+    title: data.title,
+    category: data.category,
+    date: data.date,
+    author: data.author,
+    content: data.content,
+    isPinned: data.is_pinned,
+    tagline: data.tagline || undefined,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+
+  const current = this.getAnnouncements();
+  setStored<Announcement[]>(
+    STORAGE_KEYS.ANNOUNCEMENTS,
+    [created, ...current]
+  );
+
+  emitDataChange();
+
+  return created;
+},
   async deleteAnnouncement(id: string): Promise<void> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<{ deletedId: string }>>(`/announcements/${id}`, {
-          method: 'DELETE',
-        });
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal menghapus pengumuman via Worker API');
-        }
-        emitDataChange();
-        return;
-      } catch (err) {
-        console.error('[DataService] Worker deleteAnnouncement error:', err);
-        throw err;
-      }
-    }
+  const { error } = await supabase
+    .from('announcements')
+    .delete()
+    .eq('id', id);
 
-    const current = this.getAnnouncements();
-    const updated = current.filter((item) => item.id !== id);
-    setStored(STORAGE_KEYS.ANNOUNCEMENTS, updated);
-    emitDataChange();
-  },
+  if (error) {
+    console.error('[DataService] Supabase deleteAnnouncement error:', error);
+    throw new Error(error.message || 'Gagal menghapus pengumuman dari Supabase');
+  }
+
+  const current = this.getAnnouncements();
+  const updated = current.filter((item) => item.id !== id);
+
+  setStored<Announcement[]>(
+    STORAGE_KEYS.ANNOUNCEMENTS,
+    updated
+  );
+
+  emitDataChange();
+},
   // ==========================================
   // 2. AGENDAS & EVENTS - SUPABASE
   // ==========================================
