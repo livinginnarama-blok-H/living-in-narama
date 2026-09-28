@@ -37,13 +37,32 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
 
   // Centralized DataService Subscription
   useEffect(() => {
-    const unsubscribe = DataService.subscribe(() => {
-      setAnnouncements(DataService.getAnnouncements());
-      setAgendas(DataService.getAgendas());
-      setMetrics(DataService.getFinancialMetrics());
-    });
-    return unsubscribe;
-  }, []);
+  const loadData = async () => {
+    try {
+      const fetchedAnnouncements = await DataService.fetchAnnouncements();
+      setAnnouncements(fetchedAnnouncements);
+    } catch (error) {
+      console.error('[BerandaView] Gagal memuat pengumuman:', error);
+    }
+
+    try {
+      const fetchedAgendas = await DataService.fetchAgendas();
+      setAgendas(fetchedAgendas);
+    } catch (error) {
+      console.error('[BerandaView] Gagal memuat agenda:', error);
+    }
+  };
+
+  loadData();
+
+  const unsubscribe = DataService.subscribe(() => {
+    setAnnouncements(DataService.getAnnouncements());
+    setAgendas(DataService.getAgendas());
+    setMetrics(DataService.getFinancialMetrics());
+  });
+
+  return unsubscribe;
+}, []);
 
   // Find today's ronda team
   const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
