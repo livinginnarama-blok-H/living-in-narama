@@ -30,11 +30,23 @@ export const PengumumanView: React.FC<PengumumanViewProps> = ({ isAdmin }) => {
 
   // Subscribe to centralized DataService
   useEffect(() => {
-    const unsubscribe = DataService.subscribe(() => {
-      setAnnouncements(DataService.getAnnouncements());
-    });
-    return unsubscribe;
-  }, []);
+  const loadAnnouncements = async () => {
+    try {
+      const data = await DataService.fetchAnnouncements();
+      setAnnouncements(data);
+    } catch (error) {
+      console.error('[PengumumanView] Gagal memuat pengumuman:', error);
+    }
+  };
+
+  loadAnnouncements();
+
+  const unsubscribe = DataService.subscribe(() => {
+    setAnnouncements(DataService.getAnnouncements());
+  });
+
+  return unsubscribe;
+}, []);
 
   // Admin New Announcement Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
