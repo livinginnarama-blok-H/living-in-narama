@@ -80,7 +80,86 @@ const STORAGE_KEYS = {
   HOUSEHOLDS: 'narama_blok_h_households_v1',
   IPL_PAYMENTS: 'narama_blok_h_ipl_payments_v1',
 };
+export async function migrateLocalTransactionsToSupabase(): Promise<{
+  success: boolean;
+  total: number;
+  inserted: number;
+  message: string;
+}> {
+  const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
 
+  if (!raw) {
+    throw new Error('Data transaksi LocalStorage tidak ditemukan.');
+  }
+
+  const localTransactions = JSON.parse(raw);
+
+  if (!Array.isArray(localTransactions)) {
+    throw new Error('Format data transaksi LocalStorage tidak valid.');
+  }
+
+  const rows = localTransactions.map((item: any) => ({
+    id: item.id,
+    date: item.date,
+    type: item.type,
+    category: item.category,
+    description: item.description,
+    amount: Math.round(Number(item.amount) || 0),
+
+    payment_method: item.paymentMethod || 'transfer_bank',
+
+    household_id: item.householdId || null,
+
+    status: item.status || 'active',
+
+    created_at: item.createdAt || new Date().toISOString(),
+    updated_at: item.updatedAt || null,
+    created_by: item.createdBy || null,
+
+    voided_at: item.voidedAt || null,
+    voided_by: item.voidedBy || null,
+    void_reason: item.voidReason || null,
+
+    receipt_number: item.receiptNumber || null,
+    payer_or_recipient: item.payerOrRecipient || null,
+    reference_no: item.referenceNo || null,
+    notes: item.notes || null,
+
+    ipl_payment_id: item.iplPaymentId || null,
+    house_number: item.houseNumber || null,
+    updated_by: item.updatedBy || null,
+  }));
+
+  console.log(
+    '[Migration] Akan mengirim transaksi ke Supabase:',
+    rows
+  );
+
+  const { data, error } = await supabase
+    .from('financial_transactions')
+    .upsert(rows, {
+      onConflict: 'id',
+    })
+    .select();
+
+  if (error) {
+    console.error('[Migration] Supabase error:', error);
+    throw new Error(error.message);
+  }
+
+  const inserted = data?.length || 0;
+
+  console.log(
+    `[Migration] Selesai. ${inserted} transaksi diproses dari ${rows.length} transaksi.`
+  );
+
+  return {
+    success: true,
+    total: rows.length,
+    inserted,
+    message: `Berhasil memproses ${inserted} dari ${rows.length} transaksi.`,
+  };
+}
 // Helper to generate collision-resistant IDs
 function generateSafeId(prefix: string): string {
   try {
@@ -2470,3 +2549,8 @@ export default {
 };`;
   },
 };
+
+if (typeof window !== 'undefined') {
+  (window as any).__migrateLocalTransactionsToSupabase =
+    migrateLocalTransactionsToSupabase;
+}
