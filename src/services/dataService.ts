@@ -1145,68 +1145,154 @@ export const DataService: IPortalDataRepository = {
   },
 
   async fetchTransactions(includeVoid: boolean = true): Promise<FinancialTransaction[]> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const url = `/finances${includeVoid ? '?includeVoid=true' : ''}`;
-        const json = await safeFetch<ApiResponse<FinancialTransaction[]>>(url);
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal memuat transaksi kas dari Worker API');
-        }
-        return json.data || [];
-      } catch (err) {
-        console.error('[DataService] Worker fetchTransactions error:', err);
-        throw err;
-      }
-    }
-    return this.getTransactions(includeVoid);
-  },
+  const { data, error } = await supabase
+    .from('financial_transactions')
+    .select('*')
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false });
 
-  async addTransaction(item: Omit<FinancialTransaction, 'id' | 'createdAt' | 'status'>): Promise<FinancialTransaction> {
-    const parsedAmount = Math.round(Number(item.amount));
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      throw new Error('Nominal transaksi kas harus lebih besar dari 0 Rupiah.');
-    }
+  if (error) {
+    console.error('[DataService] Supabase fetchTransactions error:', error);
+    throw new Error(
+      error.message || 'Gagal memuat transaksi kas dari Supabase'
+    );
+  }
 
-    if (!item.date || !/^\d{4}-\d{2}-\d{2}$/.test(item.date)) {
-      throw new Error('Format tanggal transaksi tidak valid (harus YYYY-MM-DD).');
-    }
+  const transactions: FinancialTransaction[] = (data || [])
+    .map((item) => ({
+      id: item.id,
+      date: item.date,
+      type: item.type,
+      category: item.category,
+      description: item.description,
+      amount: Math.max(0, Number(item.amount) || 0),
+      receiptNumber: item.receipt_number || undefined,
+      payerOrRecipient: item.payer_or_recipient || undefined,
+      paymentMethod: item.payment_method || 'transfer_bank',
+      referenceNo: item.reference_no || undefined,
+      notes: item.notes || undefined,
+      status: item.status || 'active',
+      voidReason: item.void_reason || undefined,
+      voidedAt: item.voided_at || undefined,
+      voidedBy: item.voided_by || undefined,
+      householdId: item.household_id || undefined,
+      houseNumber: item.house_number || undefined,
+      iplPaymentId: item.ipl_payment_id || undefined,
+      createdAt: item.created_at || undefined,
+      updatedAt: item.updated_at || undefined,
+      createdBy: item.created_by || undefined,
+      updatedBy: item.updated_by || undefined,
+    }))
+    .filter((item) => includeVoid || item.status !== 'void');
 
-    const nowIso = new Date().toISOString();
-    const newItem: FinancialTransaction = {
-      ...item,
-      amount: parsedAmount,
-      id: generateSafeId('tx'),
-      status: 'active',
-      paymentMethod: item.paymentMethod || 'transfer_bank',
-      createdAt: nowIso,
-      updatedAt: nowIso,
-      createdBy: item.createdBy || '',
-    };
+  setStored<FinancialTransaction[]>(
+    STORAGE_KEYS.TRANSACTIONS,
+    transactions
+  );
 
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<FinancialTransaction>>('/finances', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newItem),
-        });
-        if (!json.success || !json.data) {
-          throw new Error(json.error || 'Gagal menambah transaksi via Worker API');
-        }
-        emitDataChange();
-        return json.data;
-      } catch (err) {
-        console.error('[DataService] Worker addTransaction error:', err);
-        throw err;
-      }
-    }
+  emitDataChange();
 
-    const current = this.getTransactions(true);
-    const updated = [newItem, ...current];
-    setStored(STORAGE_KEYS.TRANSACTIONS, updated);
-    emitDataChange();
-    return newItem;
-  },
+  return transactions;
+},
+
+  async addTransaction(
+  item: Omit<FinancialTransaction, 'id' | 'createdAt' | 'status'>
+): Promise<FinancialTransaction> {
+  const parsedAmount = Math.round(Number(item.amount));
+
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    throw new Error('Nominal transaksi kas harus lebih besar dari 0 Rupiah.');
+  }
+
+  if (!item.date || !/^\d{4}-\d{2}-\d{2}$/.test(item.date)) {
+    throw new Error('Format tanggal transaksi tidak valid (harus YYYY-MM-DD).');
+  }
+
+  const nowIso = new Date().toISOString();
+
+  const newItem: FinancialTransaction = {
+    ...item,
+    amount: parsedAmount,
+    id: generateSafeId('tx'),
+    status: 'active',
+    paymentMethod: item.paymentMethod || 'transfer_bank',
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    createdBy: item.createdBy || '',
+  };
+
+  const { data, error } = await supabase
+    .from('financial_transactions')
+    .insert({
+      id: newItem.id,
+      date: newItem.date,
+      type: newItem.type,
+      category: newItem.category,
+      description: newItem.description,
+      amount: newItem.amount,
+      receipt_number: newItem.receiptNumber ?? null,
+      payer_or_recipient: newItem.payerOrRecipient ?? null,
+      payment_method: newItem.paymentMethod ?? 'transfer_bank',
+      reference_no: newItem.referenceNo ?? null,
+      notes: newItem.notes ?? null,
+      status: newItem.status,
+      household_id: newItem.householdId ?? null,
+      house_number: newItem.houseNumber ?? null,
+      ipl_payment_id: newItem.iplPaymentId ?? null,
+      created_at: newItem.createdAt,
+      updated_at: newItem.updatedAt,
+      created_by: newItem.createdBy || null,
+      updated_by: newItem.updatedBy ?? null,
+      void_reason: newItem.voidReason ?? null,
+      voided_at: newItem.voidedAt ?? null,
+      voided_by: newItem.voidedBy ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[DataService] Supabase addTransaction error:', error);
+    throw new Error(
+      error.message || 'Gagal menambah transaksi kas ke Supabase'
+    );
+  }
+
+  const created: FinancialTransaction = {
+    id: data.id,
+    date: data.date,
+    type: data.type,
+    category: data.category,
+    description: data.description,
+    amount: Math.max(0, Number(data.amount) || 0),
+    receiptNumber: data.receipt_number || undefined,
+    payerOrRecipient: data.payer_or_recipient || undefined,
+    paymentMethod: data.payment_method || 'transfer_bank',
+    referenceNo: data.reference_no || undefined,
+    notes: data.notes || undefined,
+    status: data.status || 'active',
+    voidReason: data.void_reason || undefined,
+    voidedAt: data.voided_at || undefined,
+    voidedBy: data.voided_by || undefined,
+    householdId: data.household_id || undefined,
+    houseNumber: data.house_number || undefined,
+    iplPaymentId: data.ipl_payment_id || undefined,
+    createdAt: data.created_at || undefined,
+    updatedAt: data.updated_at || undefined,
+    createdBy: data.created_by || undefined,
+    updatedBy: data.updated_by || undefined,
+  };
+
+  const current = this.getTransactions(true);
+
+  setStored<FinancialTransaction[]>(
+    STORAGE_KEYS.TRANSACTIONS,
+    [created, ...current]
+  );
+
+  emitDataChange();
+
+  return created;
+},
 
   /**
    * Soft delete / void transaction mechanism.
