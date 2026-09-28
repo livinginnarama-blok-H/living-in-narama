@@ -19,6 +19,27 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
     const [items, setItems] = useState<DocumentationItem[]>(
     () => DataService.getDocumentation()
   );
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDocumentation = async () => {
+      try {
+        const latest = await DataService.fetchDocumentation();
+
+        if (!cancelled) {
+          setItems(latest);
+        }
+      } catch (error) {
+        console.error('Gagal memuat dokumentasi terbaru:', error);
+      }
+    };
+
+    loadDocumentation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [activeCategory, setActiveCategory] = useState<string>('semua');
   const [selectedPhoto, setSelectedPhoto] =
     useState<DocumentationItem | null>(null);
