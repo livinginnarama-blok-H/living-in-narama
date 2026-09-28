@@ -15,6 +15,7 @@ import {
   formatAuditDate,
   DEFAULT_MONTHLY_IPL_FEE,
 } from '../services/dataService';
+import { AuthService } from '../services/authService';
 import {
   Wallet,
   ArrowDownLeft,
@@ -45,6 +46,8 @@ interface KeuanganViewProps {
 }
 
 export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
+  const currentUser = AuthService.getCurrentSession().user;
+  const currentUserId = currentUser?.id || '';
   // Period filter state: default is current system month
   const [periodFilter, setPeriodFilter] = useState<FinancialPeriodFilter>({
     type: 'current_month',
@@ -284,7 +287,7 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
         notes: newNotes.trim() || undefined,
         householdId: targetHh ? targetHh.id : undefined,
         houseNumber: targetHh ? targetHh.houseNumber : undefined,
-        createdBy: 'bendahara_demo',
+        createdBy: currentUserId,
       });
 
       setIsAddModalOpen(false);
@@ -351,7 +354,7 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
         paymentMethod: iplMethod,
         referenceNo: iplRefNo.trim() || undefined,
         notes: iplNotes.trim() || undefined,
-        recordedBy: 'bendahara_demo',
+        recordedBy: currentUserId,
       });
 
       setIsIplModalOpen(false);
@@ -376,10 +379,10 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
 
     try {
       await DataService.voidTransaction(
-        targetVoidTx.id,
-        voidReasonInput.trim() || 'Dibatalkan oleh pengurus (audit log tersimpan)',
-        'bendahara_demo'
-      );
+      targetVoidTx.id,
+      voidReasonInput.trim() || 'Dibatalkan oleh pengurus (audit log tersimpan)',
+      currentUserId
+    );
       setIsVoidModalOpen(false);
       setTargetVoidTx(null);
       setVoidReasonInput('');
@@ -1105,7 +1108,7 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
                     ) : (
                       <>
                         <option value="keamanan-satpam">Honor & Operasional Satpam</option>
-                        <option value="kebersihan-sampah">Retribusi Truk Sampah</option>
+                        <option value="kebersihan-sampah">Pembayaran Sampah</option>
                         <option value="penerangan-cctv">Penerangan Jalan & CCTV</option>
                         <option value="perawatan-fasum">Perawatan Fasum & Taman</option>
                         <option value="kas-sosial">Santunan Sosial Warga</option>
@@ -1547,7 +1550,9 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
                 <span className="text-[10px] text-slate-400 block uppercase font-bold">Audit Trail (Rekam Sistem)</span>
                 <div className="flex justify-between">
                   <span>Dibuat:</span>
-                  <span className="font-mono">{formatAuditDate(detailTx.createdAt)} ({detailTx.createdBy || 'demo'})</span>
+                  <span className="font-mono">
+                    {formatAuditDate(detailTx.createdAt)} ({detailTx.createdBy || 'Tidak tercatat'})
+                  </span>
                 </div>
                 {detailTx.updatedAt && (
                   <div className="flex justify-between">

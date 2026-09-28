@@ -593,23 +593,6 @@ export interface AdminUser {
 
   lastLogin?: string;
 }
-
-export interface DemoCredentials {
-  username: string;
-  password: string;
-}
-
-export interface AuthSession {
-  isAuthenticated: boolean;
-
-  user: AdminUser | null;
-
-  mode:
-    | 'demo'
-    | 'production_d1'
-    | 'supabase';
-}
-
 /**
  * ==========================================================
  * 11. CITIZEN REPORT

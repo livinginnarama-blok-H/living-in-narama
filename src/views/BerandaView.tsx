@@ -154,7 +154,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
           <div>
             <span className="block text-emerald-300 text-[11px] font-medium">Status Rekapitulasi Kas</span>
             <span className="text-sm sm:text-base font-bold text-emerald-200">
-              Data Simulasi Uji Coba
+              Rekapitulasi Kas Warga
             </span>
           </div>
         </div>

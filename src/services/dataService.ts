@@ -933,7 +933,7 @@ export const DataService: IPortalDataRepository = {
         iplPaymentId: paymentId,
         createdAt: nowIso,
         updatedAt: nowIso,
-        createdBy: params.recordedBy || 'bendahara_demo',
+        createdBy: params.recordedBy || '',
       };
 
       const currentTxs = this.getTransactions(true);
@@ -1144,7 +1144,7 @@ export const DataService: IPortalDataRepository = {
       paymentMethod: item.paymentMethod || 'transfer_bank',
       createdAt: nowIso,
       updatedAt: nowIso,
-      createdBy: item.createdBy || 'bendahara_demo',
+      createdBy: item.createdBy || '',
     };
 
     if (DATA_CONFIG.mode === 'cloudflare_worker') {
@@ -1182,7 +1182,7 @@ export const DataService: IPortalDataRepository = {
   async voidTransaction(
     id: string,
     reason: string = 'Pembatalan transaksi oleh bendahara',
-    voidedBy: string = 'bendahara_demo'
+    voidedBy: string = ''
   ): Promise<FinancialTransaction | null> {
     const nowIso = new Date().toISOString();
 
@@ -1344,7 +1344,7 @@ export const DataService: IPortalDataRepository = {
       monthlyIPLCollected: iplRecap.collectedAmount,
       monthlyIPLOutstanding: iplRecap.outstandingAmount,
       asOfDate: dateFormatted,
-      isDemo: true,
+      isDemo: false,
     };
   },
 

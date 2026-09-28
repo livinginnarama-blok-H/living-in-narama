@@ -214,7 +214,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
             Dokumentasi Lingkungan Blok H
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Koleksi foto simulasi untuk demonstrasi fitur galeri kegiatan warga dan arsip penataan lingkungan.
+            Dokumentasi kegiatan dan penataan lingkungan Blok H.
           </p>
         </div>
 

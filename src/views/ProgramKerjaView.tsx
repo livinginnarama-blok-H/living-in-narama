@@ -123,15 +123,12 @@ export const ProgramKerjaView: React.FC<ProgramKerjaViewProps> = ({ isAdmin }) =
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800">
             <Briefcase className="w-4 h-4 text-emerald-700" />
             <span>Rencana Strategis Kepengurusan</span>
-            <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">
-              DATA DEMO
-            </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Program Kerja Paguyuban Blok H
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Daftar program di bawah ini merupakan data simulasi percontohan untuk menguji fitur pelacakan capaian dan anggaran program warga.
+            Daftar program kerja dan kegiatan yang direncanakan serta dilaksanakan oleh Paguyuban Blok H.
           </p>
         </div>
 
