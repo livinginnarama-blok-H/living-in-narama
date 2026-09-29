@@ -37,31 +37,55 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
 
   // Centralized DataService Subscription
   useEffect(() => {
+  let cancelled = false;
+
   const loadData = async () => {
     try {
       const fetchedAnnouncements = await DataService.fetchAnnouncements();
-      setAnnouncements(fetchedAnnouncements);
+
+      if (!cancelled) {
+        setAnnouncements(fetchedAnnouncements);
+      }
     } catch (error) {
       console.error('[BerandaView] Gagal memuat pengumuman:', error);
     }
 
     try {
       const fetchedAgendas = await DataService.fetchAgendas();
-      setAgendas(fetchedAgendas);
+
+      if (!cancelled) {
+        setAgendas(fetchedAgendas);
+      }
     } catch (error) {
       console.error('[BerandaView] Gagal memuat agenda:', error);
+    }
+
+    // Load transaksi keuangan terbaru dari Supabase
+    try {
+      await DataService.fetchTransactions(true);
+
+      if (!cancelled) {
+        setMetrics(DataService.getFinancialMetrics());
+      }
+    } catch (error) {
+      console.error('[BerandaView] Gagal memuat transaksi keuangan:', error);
     }
   };
 
   loadData();
 
   const unsubscribe = DataService.subscribe(() => {
+    if (cancelled) return;
+
     setAnnouncements(DataService.getAnnouncements());
     setAgendas(DataService.getAgendas());
     setMetrics(DataService.getFinancialMetrics());
   });
 
-  return unsubscribe;
+  return () => {
+    cancelled = true;
+    unsubscribe();
+  };
 }, []);
 
   // Find today's ronda team
