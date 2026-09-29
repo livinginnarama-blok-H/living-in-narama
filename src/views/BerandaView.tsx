@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TabKey, Announcement, EventAgenda } from '../types/portal';
+import { TabKey, Announcement, EventAgenda, RondaSchedule } from '../types/portal';
 import { DataService } from '../services/dataService';
 import heroImage from '@/src/assets/images/hero_mountain_housing_1790351060957.jpg';
 import {
@@ -33,7 +33,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
   const [announcements, setAnnouncements] = useState<Announcement[]>(() => DataService.getAnnouncements());
   const [agendas, setAgendas] = useState<EventAgenda[]>(() => DataService.getAgendas());
   const [metrics, setMetrics] = useState(() => DataService.getFinancialMetrics());
-  const rondaSchedules = DataService.getRondaSchedules();
+  const [rondaSchedules, setRondaSchedules] = useState<RondaSchedule[]>([]);
 
   // Centralized DataService Subscription
   useEffect(() => {
@@ -59,7 +59,15 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
     } catch (error) {
       console.error('[BerandaView] Gagal memuat agenda:', error);
     }
+    try {
+      const fetchedRondaSchedules = await DataService.fetchRondaSchedules();
 
+      if (!cancelled) {
+        setRondaSchedules(fetchedRondaSchedules);
+      }
+    } catch (error) {
+      console.error('[BerandaView] Gagal memuat jadwal ronda:', error);
+    }
     // Load transaksi keuangan terbaru dari Supabase
     try {
       await DataService.fetchTransactions(true);
