@@ -22,11 +22,39 @@ import { DokumentasiView } from './views/DokumentasiView';
 import { AdminView } from './views/AdminView';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabKey>(() => {
-  const savedTab = localStorage.getItem('narama_active_tab');
+  const getTabFromPath = (): TabKey => {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
 
-  return (savedTab as TabKey) || 'beranda';
-});
+  switch (path) {
+    case '/pengumuman':
+      return 'pengumuman';
+    case '/agenda':
+      return 'agenda';
+    case '/program-kerja':
+      return 'proker';
+    case '/keuangan':
+      return 'keuangan';
+    case '/dokumentasi':
+      return 'dokumentasi';
+    case '/admin':
+      return 'admin';
+    default:
+      return 'beranda';
+  }
+};
+useEffect(() => {
+  const handlePopState = () => {
+    setActiveTab(getTabFromPath());
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  window.addEventListener('popstate', handlePopState);
+
+  return () => {
+    window.removeEventListener('popstate', handlePopState);
+  };
+}, []);
+const [activeTab, setActiveTab] = useState<TabKey>(getTabFromPath());
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -50,14 +78,30 @@ export default function App() {
   // Scroll to top on tab change
   const handleSelectTab = (tab: TabKey) => {
   setActiveTab(tab);
-  localStorage.setItem('narama_active_tab', tab);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const pathMap: Record<TabKey, string> = {
+    beranda: '/',
+    pengumuman: '/pengumuman',
+    agenda: '/agenda',
+    proker: '/program-kerja',
+    keuangan: '/keuangan',
+    dokumentasi: '/dokumentasi',
+    admin: '/admin',
   };
+
+  const newPath = pathMap[tab];
+
+  if (window.location.pathname !== newPath) {
+    window.history.pushState({}, '', newPath);
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
   const handleLogout = async () => {
   await AuthService.logout();
-  localStorage.setItem('narama_active_tab', 'beranda');
-  setActiveTab('beranda');
+  window.history.pushState({}, '', '/');
+setActiveTab('beranda');
   };
 
   return (
