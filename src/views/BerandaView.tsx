@@ -96,16 +96,31 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
   };
 }, []);
 
-  // Find today's ronda team
-  const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-  const todayName = dayNames[new Date().getDay()];
-  const todayRonda =
+// Find today's ronda team
+const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const todayName = dayNames[new Date().getDay()];
+const todayRonda =
   rondaSchedules.find(
     (r) => r.day.toLowerCase() === todayName.toLowerCase()
   ) || null;
 
-  const pinnedAnnouncement = announcements.find((a) => a.isPinned) || announcements[0];
-  const upcomingAgendas = agendas.filter((a) => a.status === 'upcoming').slice(0, 2);
+const pinnedAnnouncement = announcements.find((a) => a.isPinned) || announcements[0];
+
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+const upcomingAgendas = agendas
+  .filter((a) => {
+    const agendaDate = new Date(a.date);
+    agendaDate.setHours(0, 0, 0, 0);
+
+    return agendaDate >= today;
+  })
+  .sort(
+    (a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+  )
+  .slice(0, 2);
 
   // Selected announcement for quick modal
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
