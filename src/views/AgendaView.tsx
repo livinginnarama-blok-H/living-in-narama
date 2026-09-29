@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AgendaItem } from '../types/portal';
+import { AgendaItem, RondaSchedule } from '../types/portal';
 import { DataService } from '../services/dataService';
 import {
   Calendar,
@@ -9,6 +9,7 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
+  Pencil,
   CalendarPlus,
   Shield,
   X,
@@ -25,51 +26,55 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [viewTab, setViewTab] = useState<'kegiatan' | 'ronda'>('kegiatan');
   const [statusFilter, setStatusFilter] = useState<'upcoming' | 'completed' | 'all'>('upcoming');
-  const rondaSchedules = DataService.getRondaSchedules();
 
-    useEffect(() => {
-    let mounted = true;
+  const [rondaSchedules, setRondaSchedules] = useState<RondaSchedule[]>([]);
+  const [isRondaLoading, setIsRondaLoading] = useState(true);
+  const [rondaErrorMessage, setRondaErrorMessage] = useState('');
+  const [isRondaModalOpen, setIsRondaModalOpen] = useState(false);
+  const [editingRonda, setEditingRonda] = useState<RondaSchedule | null>(null);
+  const [rondaDay, setRondaDay] = useState('');
+  const [rondaTeam, setRondaTeam] = useState('');
+  const [rondaCoordinator, setRondaCoordinator] = useState('');
+  const [rondaHouses, setRondaHouses] = useState('');
+  const [isRondaSaving, setIsRondaSaving] = useState(false);
 
-    const loadAgendas = async () => {
-      try {
-        setIsLoading(true);
-        setErrorMessage('');
+  useEffect(() => {
+  let mounted = true;
 
-        const data = await DataService.fetchAgendas();
+  const loadRondaSchedules = async () => {
+    try {
+      setIsRondaLoading(true);
+      setRondaErrorMessage('');
 
-        if (mounted) {
-          setAgendas(data);
-        }
-      } catch (error) {
-        console.error('[AgendaView] Gagal memuat agenda:', error);
+      const data = await DataService.fetchRondaSchedules();
 
-        if (mounted) {
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : 'Gagal memuat agenda'
-          );
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadAgendas();
-
-    const unsubscribe = DataService.subscribe(() => {
       if (mounted) {
-        setAgendas(DataService.getAgendas());
+        setRondaSchedules(data);
       }
-    });
+    } catch (error) {
+      console.error('[AgendaView] Gagal memuat jadwal ronda:', error);
 
-    return () => {
-      mounted = false;
-      unsubscribe();
-    };
-  }, []);
+      if (mounted) {
+        setRondaErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Gagal memuat jadwal ronda.'
+        );
+        setRondaSchedules([]);
+      }
+    } finally {
+      if (mounted) {
+        setIsRondaLoading(false);
+      }
+    }
+  };
+
+  loadRondaSchedules();
+
+  return () => {
+    mounted = false;
+  };
+}, []);
 
   // Add Agenda Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -81,6 +86,109 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
   const [newPic, setNewPic] = useState('');
   const [newDescription, setNewDescription] = useState('');
 
+  const openAddRondaModal = () => {
+  setEditingRonda(null);
+  setRondaDay('');
+  setRondaTeam('');
+  setRondaCoordinator('');
+  setRondaHouses('');
+  setRondaErrorMessage('');
+  setIsRondaModalOpen(true);
+};
+
+const openEditRondaModal = (ronda: RondaSchedule) => {
+  setEditingRonda(ronda);
+  setRondaDay(ronda.day);
+  setRondaTeam(ronda.team);
+  setRondaCoordinator(ronda.coordinator);
+  setRondaHouses(ronda.houses.join(', '));
+  setRondaErrorMessage('');
+  setIsRondaModalOpen(true);
+};
+
+const handleRondaSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (
+    !rondaDay.trim() ||
+    !rondaTeam.trim() ||
+    !rondaCoordinator.trim()
+  ) {
+    return;
+  }
+
+  const houses = rondaHouses
+    .split(',')
+    .map((house) => house.trim())
+    .filter(Boolean);
+
+  try {
+    setIsRondaSaving(true);
+    setRondaErrorMessage('');
+
+    if (editingRonda) {
+      const updated = await DataService.updateRondaSchedule(
+        editingRonda.id,
+        {
+          day: rondaDay.trim(),
+          team: rondaTeam.trim(),
+          coordinator: rondaCoordinator.trim(),
+          houses,
+        }
+      );
+
+      setRondaSchedules((current) =>
+        current.map((item) =>
+          item.id === updated.id ? updated : item
+        )
+      );
+    } else {
+      const created = await DataService.addRondaSchedule({
+        day: rondaDay.trim(),
+        team: rondaTeam.trim(),
+        coordinator: rondaCoordinator.trim(),
+        houses,
+      });
+
+      setRondaSchedules((current) => [...current, created]);
+    }
+
+    setIsRondaModalOpen(false);
+    setEditingRonda(null);
+  } catch (error) {
+    console.error('[AgendaView] Gagal menyimpan jadwal ronda:', error);
+
+    setRondaErrorMessage(
+      error instanceof Error
+        ? error.message
+        : 'Gagal menyimpan jadwal ronda.'
+    );
+  } finally {
+    setIsRondaSaving(false);
+  }
+};
+
+const handleDeleteRonda = async (id: string) => {
+  if (!window.confirm('Hapus jadwal ronda ini?')) return;
+
+  try {
+    setRondaErrorMessage('');
+
+    await DataService.deleteRondaSchedule(id);
+
+    setRondaSchedules((current) =>
+      current.filter((item) => item.id !== id)
+    );
+  } catch (error) {
+    console.error('[AgendaView] Gagal menghapus jadwal ronda:', error);
+
+    setRondaErrorMessage(
+      error instanceof Error
+        ? error.message
+        : 'Gagal menghapus jadwal ronda.'
+    );
+  }
+};
   const filteredAgendas = agendas.filter((item) => {
     if (statusFilter === 'all') return true;
     return item.status === statusFilter;
@@ -358,6 +466,18 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
       ) : (
                 /* Ronda Siskamling Tab */
         <div className="space-y-4">
+          {isAdmin && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={openAddRondaModal}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-sm transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Tambah Jadwal Ronda
+            </button>
+          </div>
+        )}
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-xs text-emerald-900 flex items-start gap-3">
             <Shield className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
 
@@ -374,71 +494,116 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
             </div>
           </div>
 
-          {rondaSchedules.length === 0 ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-6 text-center">
-              <Shield className="w-8 h-8 text-emerald-700 mx-auto mb-3" />
+          {isRondaLoading ? (
+  <div className="bg-white rounded-xl border border-slate-200 p-6 text-center">
+    <div className="w-8 h-8 mx-auto mb-3 rounded-full border-2 border-emerald-200 border-t-emerald-700 animate-spin" />
 
-              <h4 className="font-bold text-sm text-slate-900">
-                Jadwal Siskamling Belum Tersedia
-              </h4>
+    <h4 className="font-bold text-sm text-slate-900">
+      Memuat Jadwal Siskamling
+    </h4>
 
-              <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-lg mx-auto">
-                Jadwal siskamling, regu jaga, dan nomor rumah akan diperbarui
-                oleh pengurus setelah hasil koordinasi dan kesepakatan warga
-                Blok H.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {rondaSchedules.filter(Boolean).map((ronda, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white rounded-xl border border-slate-200 p-5 space-y-3 hover:border-emerald-300 transition-colors"
-                >
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span className="text-sm font-bold text-slate-900">
-                      Malam {ronda.day}
-                    </span>
+    <p className="text-xs text-slate-500 mt-2">
+      Sedang mengambil jadwal ronda dari sistem.
+    </p>
+  </div>
+) : rondaErrorMessage ? (
+  <div className="bg-white rounded-xl border border-red-200 p-6 text-center">
+    <AlertCircle className="w-8 h-8 text-red-600 mx-auto mb-3" />
 
-                    <span className="text-xs font-semibold text-emerald-800">
-                      {ronda.team}
-                    </span>
-                  </div>
+    <h4 className="font-bold text-sm text-slate-900">
+      Jadwal Siskamling Gagal Dimuat
+    </h4>
 
-                  <div className="text-xs space-y-1">
-                    <span className="text-slate-500">
-                      Koordinator Regu:
-                    </span>
+    <p className="text-xs text-red-600 mt-2 leading-relaxed max-w-lg mx-auto">
+      {rondaErrorMessage}
+    </p>
+  </div>
+) : rondaSchedules.length === 0 ? (
+  <div className="bg-white rounded-xl border border-slate-200 p-6 text-center">
+    <Shield className="w-8 h-8 text-emerald-700 mx-auto mb-3" />
 
-                    <p className="font-semibold text-slate-800">
-                      {ronda.coordinator}
-                    </p>
-                  </div>
+    <h4 className="font-bold text-sm text-slate-900">
+      Jadwal Siskamling Belum Tersedia
+    </h4>
 
-                  <div className="pt-1">
-                    <span className="text-[11px] text-slate-500 block mb-1.5">
-                      Anggota Warga Rumah:
-                    </span>
+    <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-lg mx-auto">
+      Jadwal siskamling, regu jaga, dan nomor rumah akan diperbarui
+      oleh pengurus setelah hasil koordinasi dan kesepakatan warga
+      Blok H.
+    </p>
+  </div>
+) : (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {rondaSchedules.filter(Boolean).map((ronda, idx) => (
+      <div
+        key={ronda.id}
+        className="bg-white rounded-xl border border-slate-200 p-5 space-y-3 hover:border-emerald-300 transition-colors"
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <span className="text-sm font-bold text-slate-900">
+            Malam {ronda.day}
+          </span>
 
-                    <div className="flex flex-wrap gap-1.5">
-                      {ronda.houses.map((house) => (
-                        <span
-                          key={house}
-                          className="px-2.5 py-1 text-xs font-mono font-semibold bg-slate-50 border border-slate-200 text-slate-800 rounded-md"
-                        >
-                          {house}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+          <span className="text-xs font-semibold text-emerald-800">
+            {ronda.team}
+          </span>
+        </div>
 
-                  <div className="pt-2 text-[11px] text-slate-400 border-t border-slate-50">
-                    Standby di Pos Satpam Blok H
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="text-xs space-y-1">
+          <span className="text-slate-500">
+            Koordinator Regu:
+          </span>
+
+          <p className="font-semibold text-slate-800">
+            {ronda.coordinator}
+          </p>
+        </div>
+
+        <div className="pt-1">
+          <span className="text-[11px] text-slate-500 block mb-1.5">
+            Anggota Warga Rumah:
+          </span>
+
+          <div className="flex flex-wrap gap-1.5">
+            {ronda.houses.map((house) => (
+              <span
+                key={house}
+                className="px-2.5 py-1 text-xs font-mono font-semibold bg-slate-50 border border-slate-200 text-slate-800 rounded-md"
+              >
+                {house}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-2 text-[11px] text-slate-400 border-t border-slate-50">
+          Standby di Pos Satpam Blok H
+        </div>
+        {isAdmin && (
+  <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+    <button
+      type="button"
+      onClick={() => openEditRondaModal(ronda)}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+    >
+      <Pencil className="w-3.5 h-3.5" />
+      Edit
+    </button>
+
+    <button
+      type="button"
+      onClick={() => handleDeleteRonda(ronda.id)}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+    >
+      <Trash2 className="w-3.5 h-3.5" />
+      Hapus
+    </button>
+  </div>
+)}
+      </div>
+    ))}
+  </div>
+)}
         </div>
       )}
       {/* Admin Add Modal */}
@@ -565,6 +730,138 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
                   className="px-4 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-700 rounded-lg transition-colors"
                 >
                   Simpan Agenda
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+            {/* Admin Ronda Modal */}
+      {isRondaModalOpen && isAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div
+            className="fixed inset-0"
+            onClick={() => {
+              if (!isRondaSaving) {
+                setIsRondaModalOpen(false);
+              }
+            }}
+          />
+
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingRonda
+                    ? 'Edit Jadwal Ronda'
+                    : 'Tambah Jadwal Ronda'}
+                </h3>
+
+                <p className="text-xs text-slate-500 mt-1">
+                  Atur regu dan rumah warga yang bertugas.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsRondaModalOpen(false)}
+                disabled={isRondaSaving}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {rondaErrorMessage && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+                {rondaErrorMessage}
+              </div>
+            )}
+
+            <form onSubmit={handleRondaSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Malam / Hari
+                </label>
+
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Senin"
+                  value={rondaDay}
+                  onChange={(e) => setRondaDay(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Nama Regu
+                </label>
+
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Regu 1"
+                  value={rondaTeam}
+                  onChange={(e) => setRondaTeam(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Koordinator Regu
+                </label>
+
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Ketua Regu"
+                  value={rondaCoordinator}
+                  onChange={(e) => setRondaCoordinator(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Nomor Rumah
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Contoh: HA-01, HA-02, HA-03"
+                  value={rondaHouses}
+                  onChange={(e) => setRondaHouses(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                />
+
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Pisahkan setiap nomor rumah dengan tanda koma.
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRondaModalOpen(false)}
+                  disabled={isRondaSaving}
+                  className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg disabled:opacity-50"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isRondaSaving}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {isRondaSaving
+                    ? 'Menyimpan...'
+                    : editingRonda
+                      ? 'Simpan Perubahan'
+                      : 'Simpan Jadwal'}
                 </button>
               </div>
             </form>

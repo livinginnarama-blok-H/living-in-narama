@@ -390,8 +390,17 @@ export interface IPortalDataRepository {
   submitReport(report: Omit<CitizenReport, 'id' | 'date' | 'status' | 'createdAt'>): Promise<CitizenReport>;
   updateReportStatus(id: string, status: CitizenReport['status']): Promise<void>;
 
-  // Ronda Schedules
+ // Ronda Schedules
   getRondaSchedules(): RondaSchedule[];
+  fetchRondaSchedules(): Promise<RondaSchedule[]>;
+  addRondaSchedule(
+    item: Omit<RondaSchedule, 'id'>
+  ): Promise<RondaSchedule>;
+  updateRondaSchedule(
+    id: string,
+    item: Partial<Omit<RondaSchedule, 'id'>>
+  ): Promise<RondaSchedule>;
+  deleteRondaSchedule(id: string): Promise<void>;
 
   // Data Lifecycle & Migration
   resetAllData(): void;
@@ -1971,12 +1980,120 @@ export const DataService: IPortalDataRepository = {
     emitDataChange();
   },
 
-  // ==========================================
-  // 9. RONDA / SISKAMLING SCHEDULE
-  // ==========================================
-  getRondaSchedules(): RondaSchedule[] {
-    return [...RONDA_SCHEDULES];
-  },
+// ==========================================
+// 9. RONDA / SISKAMLING SCHEDULE
+// ==========================================
+getRondaSchedules(): RondaSchedule[] {
+  return [...RONDA_SCHEDULES];
+},
+
+async fetchRondaSchedules(): Promise<RondaSchedule[]> {
+  const { data, error } = await supabase
+    .from('ronda_schedules')
+    .select('id, day, team, coordinator, houses')
+    .order('id', { ascending: true });
+
+  if (error) {
+    console.error('[DataService] Supabase fetchRondaSchedules error:', error);
+    throw new Error(error.message || 'Gagal memuat jadwal ronda');
+  }
+
+  const schedules: RondaSchedule[] = (data ?? []).map((item) => ({
+    id: item.id,
+    day: item.day,
+    team: item.team,
+    coordinator: item.coordinator,
+    houses: Array.isArray(item.houses) ? item.houses : [],
+  }));
+
+  return schedules;
+},
+
+async addRondaSchedule(
+  item: Omit<RondaSchedule, 'id'>
+): Promise<RondaSchedule> {
+  const { data, error } = await supabase
+    .from('ronda_schedules')
+    .insert({
+      day: item.day,
+      team: item.team,
+      coordinator: item.coordinator,
+      houses: item.houses,
+    })
+    .select('id, day, team, coordinator, houses')
+    .single();
+
+  if (error) {
+    console.error('[DataService] Supabase addRondaSchedule error:', error);
+    throw new Error(error.message || 'Gagal menambah jadwal ronda');
+  }
+
+  const schedule: RondaSchedule = {
+    id: data.id,
+    day: data.day,
+    team: data.team,
+    coordinator: data.coordinator,
+    houses: Array.isArray(data.houses) ? data.houses : [],
+  };
+
+  await this.fetchRondaSchedules();
+  emitDataChange();
+
+  return schedule;
+},
+
+async updateRondaSchedule(
+  id: string,
+  item: Partial<Omit<RondaSchedule, 'id'>>
+): Promise<RondaSchedule> {
+  const { data, error } = await supabase
+    .from('ronda_schedules')
+    .update({
+      ...(item.day !== undefined ? { day: item.day } : {}),
+      ...(item.team !== undefined ? { team: item.team } : {}),
+      ...(item.coordinator !== undefined
+        ? { coordinator: item.coordinator }
+        : {}),
+      ...(item.houses !== undefined ? { houses: item.houses } : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select('id, day, team, coordinator, houses')
+    .single();
+
+  if (error) {
+    console.error('[DataService] Supabase updateRondaSchedule error:', error);
+    throw new Error(error.message || 'Gagal memperbarui jadwal ronda');
+  }
+
+  const schedule: RondaSchedule = {
+    id: data.id,
+    day: data.day,
+    team: data.team,
+    coordinator: data.coordinator,
+    houses: Array.isArray(data.houses) ? data.houses : [],
+  };
+
+  await this.fetchRondaSchedules();
+  emitDataChange();
+
+  return schedule;
+},
+
+async deleteRondaSchedule(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('ronda_schedules')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('[DataService] Supabase deleteRondaSchedule error:', error);
+    throw new Error(error.message || 'Gagal menghapus jadwal ronda');
+  }
+
+  await this.fetchRondaSchedules();
+  emitDataChange();
+},
 
   // ==========================================
   // 10. DATA LIFECYCLE & SUBSCRIPTIONS

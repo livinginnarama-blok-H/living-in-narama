@@ -644,12 +644,10 @@ export interface CitizenReport {
  */
 
 export interface RondaSchedule {
+  id: string;
   day: string;
-
   team: string;
-
   coordinator: string;
-
   houses: string[];
 }
 
