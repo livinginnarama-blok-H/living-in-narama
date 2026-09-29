@@ -75,7 +75,43 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
     mounted = false;
   };
 }, []);
+  useEffect(() => {
+    let mounted = true;
 
+    const loadAgendas = async () => {
+      try {
+        setIsLoading(true);
+        setErrorMessage('');
+
+        const data = await DataService.fetchAgendas();
+
+        if (mounted) {
+          setAgendas(data);
+        }
+      } catch (error) {
+        console.error('[AgendaView] Gagal memuat agenda:', error);
+
+        if (mounted) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : 'Gagal memuat agenda.'
+          );
+          setAgendas([]);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadAgendas();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
   // Add Agenda Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
