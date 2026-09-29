@@ -63,8 +63,32 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
 
   // Financial transactions & summary metrics from DataService (Single Source of Truth)
   const [transactions, setTransactions] = useState<FinanceTransaction[]>(() =>
-    DataService.getTransactions(true)
-  );
+  DataService.getTransactions(true)
+);
+
+useEffect(() => {
+  let cancelled = false;
+
+  const loadTransactions = async () => {
+    try {
+      const data = await DataService.fetchTransactions(true);
+
+      if (!cancelled) {
+        setTransactions(data);
+        setAvailableMonths(DataService.getAvailableTransactionMonths());
+        setMetrics(DataService.getFinancialMetrics(periodFilter));
+      }
+    } catch (error) {
+      console.error('[KeuanganView] Gagal memuat transaksi:', error);
+    }
+  };
+
+  loadTransactions();
+
+  return () => {
+    cancelled = true;
+  };
+}, [periodFilter]);
 
   const [metrics, setMetrics] = useState<FinancialSummary>(() =>
     DataService.getFinancialMetrics(periodFilter)
