@@ -55,9 +55,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   'laporan' | 'warga' | 'cloudflare' | 'data'
   >('laporan'); 
   const [reports, setReports] = useState<CitizenReport[]>(() => DataService.getReports());
-  const [households, setHouseholds] = useState<Household[]>(
-  () => DataService.getHouseholds()
-  );
+  const [households, setHouseholds] = useState<Household[]>([]);
   const [householdSearch, setHouseholdSearch] = useState('');
   const [isHouseholdModalOpen, setIsHouseholdModalOpen] = useState(false);
   const [editingHousehold, setEditingHousehold] = useState<Household | null>(null);
@@ -75,14 +73,33 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [copiedWorker, setCopiedWorker] = useState(false);
 
   // Reactive subscription to DataService
-  useEffect(() => {
+useEffect(() => {
+  let cancelled = false;
+
+  const loadHouseholds = async () => {
+    try {
+      const data = await DataService.fetchHouseholds();
+
+      if (!cancelled) {
+        setHouseholds(data);
+      }
+    } catch (err) {
+      console.error('[AdminView] Gagal memuat data warga:', err);
+    }
+  };
+
+  loadHouseholds();
+
   const unsubscribe = DataService.subscribe(() => {
     setReports(DataService.getReports());
-    setHouseholds(DataService.getHouseholds());
+    void loadHouseholds();
   });
 
-  return unsubscribe;
-}, []);;
+  return () => {
+    cancelled = true;
+    unsubscribe();
+  };
+}, []);
 
   const d1SchemaSql = DataService.generateD1SchemaSql();
   const workerCode = DataService.generateCloudflareWorkerExample();
@@ -183,7 +200,7 @@ const handleSaveHousehold = async (e: React.FormEvent) => {
       });
     }
 
-    setHouseholds(DataService.getHouseholds());
+    setHouseholds(await DataService.fetchHouseholds());
     setIsHouseholdModalOpen(false);
     resetHouseholdForm();
   } catch (err) {
@@ -207,7 +224,7 @@ const handleDeactivateHousehold = async (household: Household) => {
 
   try {
     await DataService.deactivateHousehold(household.id);
-    setHouseholds(DataService.getHouseholds());
+    setHouseholds(await DataService.fetchHouseholds());
   } catch (err) {
     alert(
       err instanceof Error

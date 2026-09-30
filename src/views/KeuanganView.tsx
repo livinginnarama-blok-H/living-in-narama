@@ -95,13 +95,9 @@ useEffect(() => {
   );
 
   // Households and IPL Payments from DataService
-  const [households, setHouseholds] = useState<Household[]>(() =>
-    DataService.getHouseholds()
-  );
+  const [households, setHouseholds] = useState<Household[]>([]);
 
-  const [iplPayments, setIplPayments] = useState<IPLPayment[]>(() =>
-    DataService.getIPLPayments()
-  );
+  const [iplPayments, setIplPayments] = useState<IPLPayment[]>([]);
 
   // Filtering states for Buku Kas
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
@@ -119,16 +115,51 @@ useEffect(() => {
 
   // Subscribe to centralized DataService
   useEffect(() => {
-    const unsubscribe = DataService.subscribe(() => {
-      setTransactions(DataService.getTransactions(true));
-      setAvailableMonths(DataService.getAvailableTransactionMonths());
-      setMetrics(DataService.getFinancialMetrics(periodFilter));
-      setHouseholds(DataService.getHouseholds());
-      setIplPayments(DataService.getIPLPayments());
-    });
-    return unsubscribe;
-  }, [periodFilter]);
+  let cancelled = false;
 
+  const loadHouseholds = async () => {
+    try {
+      const data = await DataService.fetchHouseholds();
+
+      if (!cancelled) {
+        setHouseholds(data);
+      }
+    } catch (err) {
+      console.error('[KeuanganView] Gagal memuat data warga:', err);
+    }
+  };
+
+  loadHouseholds();
+    const loadIPLPayments = async () => {
+    try {
+      const data = await DataService.fetchIPLPayments();
+
+      if (!cancelled) {
+        setIplPayments(data);
+      }
+    } catch (err) {
+      console.error('[KeuanganView] Gagal memuat pembayaran IPL:', err);
+    }
+  };
+
+  loadHouseholds();
+  loadIPLPayments();
+
+  const unsubscribe = DataService.subscribe(() => {
+    setTransactions(DataService.getTransactions(true));
+    setAvailableMonths(DataService.getAvailableTransactionMonths());
+    setMetrics(DataService.getFinancialMetrics(periodFilter));
+    void DataService.fetchIPLPayments().then(setIplPayments).catch((err) => {
+    console.error('[KeuanganView] Gagal memuat pembayaran IPL:', err);
+});
+    void loadHouseholds();
+  });
+
+  return () => {
+    cancelled = true;
+    unsubscribe();
+  };
+}, [periodFilter]);
   // Recalculate metrics when period filter changes
   useEffect(() => {
     setMetrics(DataService.getFinancialMetrics(periodFilter));

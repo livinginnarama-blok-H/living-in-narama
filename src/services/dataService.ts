@@ -713,144 +713,173 @@ export const DataService: IPortalDataRepository = {
   },
 
   // ==========================================
-  // 4. HOUSEHOLDS (DATA RUMAH WARGA)
-  // ==========================================
-  getHouseholds(): Household[] {
-    return getStored<Household[]>(STORAGE_KEYS.HOUSEHOLDS, INITIAL_HOUSEHOLDS);
-  },
+// 4. HOUSEHOLDS (DATA RUMAH WARGA)
+// ==========================================
+getHouseholds(): Household[] {
+  return getStored<Household[]>(STORAGE_KEYS.HOUSEHOLDS, []);
+},
 
-  async fetchHouseholds(): Promise<Household[]> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<Household[]>>('/households');
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal memuat data rumah warga dari Worker API');
-        }
-        return json.data || [];
-      } catch (err) {
-        console.error('[DataService] Worker fetchHouseholds error:', err);
-        throw err;
-      }
-    }
-    return this.getHouseholds();
-  },
+async fetchHouseholds(): Promise<Household[]> {
+  const { data, error } = await supabase
+    .from('households')
+    .select(
+      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, created_at, updated_at'
+    )
+    .order('house_number', { ascending: true });
 
-  async addHousehold(item: Omit<Household, 'id' | 'createdAt' | 'updatedAt'>): Promise<Household> {
-    if (!item.houseNumber || !item.houseNumber.trim()) {
-      throw new Error('Nomor rumah wajib diisi.');
-    }
-    if (!item.residentName || !item.residentName.trim()) {
-      throw new Error('Nama kepala keluarga/warga wajib diisi.');
-    }
+  if (error) {
+    console.error('[DataService] Supabase fetchHouseholds error:', error);
+    throw new Error(error.message || 'Gagal memuat data rumah warga');
+  }
 
-    const nowIso = new Date().toISOString();
-    const newHousehold: Household = {
-      ...item,
-      id: generateSafeId('hh'),
-      houseNumber: item.houseNumber.trim(),
-      residentName: item.residentName.trim(),
-      isActive: item.isActive !== undefined ? item.isActive : true,
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    };
+  const households: Household[] = (data ?? []).map((item) => ({
+    id: item.id,
+    houseNumber: item.house_number,
+    residentName: item.resident_name,
+    occupancyStatus: item.occupancy_status as Household['occupancyStatus'],
+    isActive: item.is_active,
+    phone: item.phone ?? undefined,
+    familyMembers: item.family_members ?? undefined,
+    notes: item.notes ?? undefined,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  }));
 
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<Household>>('/households', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newHousehold),
-        });
-        if (!json.success || !json.data) {
-          throw new Error(json.error || 'Gagal menambah data rumah via Worker API');
-        }
-        emitDataChange();
-        return json.data;
-      } catch (err) {
-        console.error('[DataService] Worker addHousehold error:', err);
-        throw err;
-      }
-    }
+  setStored<Household[]>(STORAGE_KEYS.HOUSEHOLDS, households);
 
-    const current = this.getHouseholds();
-    if (current.some((h) => h.houseNumber.toLowerCase() === newHousehold.houseNumber.toLowerCase())) {
-      throw new Error(`Nomor rumah ${newHousehold.houseNumber} sudah terdaftar.`);
-    }
-    const updated = [...current, newHousehold];
-    setStored(STORAGE_KEYS.HOUSEHOLDS, updated);
-    emitDataChange();
-    return newHousehold;
-  },
+  return households;
+},
 
-  async updateHousehold(item: Household): Promise<Household> {
-    const nowIso = new Date().toISOString();
-    const updatedHousehold: Household = {
-      ...item,
-      updatedAt: nowIso,
-    };
+async addHousehold(
+  item: Omit<Household, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<Household> {
+  if (!item.houseNumber || !item.houseNumber.trim()) {
+    throw new Error('Nomor rumah wajib diisi.');
+  }
 
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<Household>>(`/households/${item.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedHousehold),
-        });
-        if (!json.success || !json.data) {
-          throw new Error(json.error || 'Gagal memperbarui data rumah via Worker API');
-        }
-        emitDataChange();
-        return json.data;
-      } catch (err) {
-        console.error('[DataService] Worker updateHousehold error:', err);
-        throw err;
-      }
-    }
+  if (!item.residentName || !item.residentName.trim()) {
+    throw new Error('Nama kepala keluarga/warga wajib diisi.');
+  }
 
-    const current = this.getHouseholds();
-    const updated = current.map((h) => (h.id === item.id ? updatedHousehold : h));
-    setStored(STORAGE_KEYS.HOUSEHOLDS, updated);
-    emitDataChange();
-    return updatedHousehold;
-  },
+  const id = generateSafeId('hh');
 
-  async deactivateHousehold(id: string): Promise<Household> {
-    const nowIso = new Date().toISOString();
+  const { data, error } = await supabase
+    .from('households')
+    .insert({
+      id,
+      house_number: item.houseNumber.trim(),
+      resident_name: item.residentName.trim(),
+      occupancy_status: item.occupancyStatus,
+      is_active: item.isActive !== undefined ? item.isActive : true,
+      phone: item.phone || null,
+      family_members: item.familyMembers ?? null,
+      notes: item.notes || null,
+    })
+    .select(
+      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, created_at, updated_at'
+    )
+    .single();
 
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<Household>>(`/households/${id}/deactivate`, {
-          method: 'POST',
-        });
-        if (!json.success || !json.data) {
-          throw new Error(json.error || 'Gagal menonaktifkan data rumah via Worker API');
-        }
-        emitDataChange();
-        return json.data;
-      } catch (err) {
-        console.error('[DataService] Worker deactivateHousehold error:', err);
-        throw err;
-      }
-    }
+  if (error) {
+    console.error('[DataService] Supabase addHousehold error:', error);
+    throw new Error(error.message || 'Gagal menambah data rumah warga');
+  }
 
-    const current = this.getHouseholds();
-    let updatedRecord: Household | null = null;
-    const updated = current.map((h) => {
-      if (h.id === id) {
-        updatedRecord = { ...h, isActive: false, updatedAt: nowIso };
-        return updatedRecord;
-      }
-      return h;
-    });
+  const newHousehold: Household = {
+    id: data.id,
+    houseNumber: data.house_number,
+    residentName: data.resident_name,
+    occupancyStatus: data.occupancy_status as Household['occupancyStatus'],
+    isActive: data.is_active,
+    phone: data.phone ?? undefined,
+    familyMembers: data.family_members ?? undefined,
+    notes: data.notes ?? undefined,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
 
-    if (!updatedRecord) {
-      throw new Error('Data unit rumah tidak ditemukan.');
-    }
+  emitDataChange();
 
-    setStored(STORAGE_KEYS.HOUSEHOLDS, updated);
-    emitDataChange();
-    return updatedRecord;
-  },
+  return newHousehold;
+},
+
+async updateHousehold(item: Household): Promise<Household> {
+  const { data, error } = await supabase
+    .from('households')
+    .update({
+      house_number: item.houseNumber.trim(),
+      resident_name: item.residentName.trim(),
+      occupancy_status: item.occupancyStatus,
+      is_active: item.isActive,
+      phone: item.phone || null,
+      family_members: item.familyMembers ?? null,
+      notes: item.notes || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', item.id)
+    .select(
+      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, created_at, updated_at'
+    )
+    .single();
+
+  if (error) {
+    console.error('[DataService] Supabase updateHousehold error:', error);
+    throw new Error(error.message || 'Gagal memperbarui data rumah warga');
+  }
+
+  const updatedHousehold: Household = {
+    id: data.id,
+    houseNumber: data.house_number,
+    residentName: data.resident_name,
+    occupancyStatus: data.occupancy_status as Household['occupancyStatus'],
+    isActive: data.is_active,
+    phone: data.phone ?? undefined,
+    familyMembers: data.family_members ?? undefined,
+    notes: data.notes ?? undefined,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+
+  emitDataChange();
+
+  return updatedHousehold;
+},
+
+async deactivateHousehold(id: string): Promise<Household> {
+  const { data, error } = await supabase
+    .from('households')
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select(
+      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, created_at, updated_at'
+    )
+    .single();
+
+  if (error) {
+    console.error('[DataService] Supabase deactivateHousehold error:', error);
+    throw new Error(error.message || 'Gagal menonaktifkan data rumah warga');
+  }
+
+  const updatedHousehold: Household = {
+    id: data.id,
+    houseNumber: data.house_number,
+    residentName: data.resident_name,
+    occupancyStatus: data.occupancy_status as Household['occupancyStatus'],
+    isActive: data.is_active,
+    phone: data.phone ?? undefined,
+    familyMembers: data.family_members ?? undefined,
+    notes: data.notes ?? undefined,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+
+  emitDataChange();
+
+  return updatedHousehold;
+},
 
   // ==========================================
   // 5. IPL PAYMENTS & PEMBAYARAN BERTAHAP
@@ -906,21 +935,87 @@ export const DataService: IPortalDataRepository = {
   },
 
   async fetchIPLPayments(period?: string): Promise<IPLPayment[]> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const query = period ? `?period=${encodeURIComponent(period)}` : '';
-        const json = await safeFetch<ApiResponse<IPLPayment[]>>(`/ipl-payments${query}`);
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal memuat pembayaran IPL dari Worker API');
-        }
-        return json.data || [];
-      } catch (err) {
-        console.error('[DataService] Worker fetchIPLPayments error:', err);
-        throw err;
-      }
-    }
-    return this.getIPLPayments(period);
-  },
+  let query = supabase
+    .from('ipl_payments')
+    .select('*')
+    .order('house_number', { ascending: true });
+
+  if (period) {
+    query = query.eq('period', period);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('[DataService] Supabase fetchIPLPayments error:', error);
+    throw new Error(
+      error.message || 'Gagal memuat pembayaran IPL dari Supabase'
+    );
+  }
+
+  const paymentRows = data ?? [];
+
+  // Ambil seluruh transaksi kas yang terhubung dengan IPL.
+  // Satu IPL dapat memiliki beberapa transaksi jika dibayar bertahap.
+  const { data: transactionRows, error: transactionError } = await supabase
+    .from('financial_transactions')
+    .select('id, ipl_payment_id, status, date')
+    .not('ipl_payment_id', 'is', null)
+    .neq('status', 'void');
+
+  if (transactionError) {
+    console.error(
+      '[DataService] Supabase fetchIPLPayments transaction lookup error:',
+      transactionError
+    );
+    throw new Error(
+      transactionError.message ||
+        'Gagal memuat relasi transaksi pembayaran IPL'
+    );
+  }
+
+  const transactionMap = new Map<string, string[]>();
+
+  (transactionRows ?? []).forEach((item) => {
+    if (!item.ipl_payment_id) return;
+
+    const current = transactionMap.get(item.ipl_payment_id) || [];
+    current.push(item.id);
+    transactionMap.set(item.ipl_payment_id, current);
+  });
+
+  const payments: IPLPayment[] = paymentRows.map((item) => {
+    const transactionIds =
+      transactionMap.get(item.id) ||
+      (item.transaction_id ? [item.transaction_id] : []);
+
+    return {
+      id: item.id,
+      householdId: item.household_id,
+      houseNumber: item.house_number,
+      residentName: item.resident_name,
+      period: item.period,
+      amount: Math.max(0, Number(item.amount) || 0),
+      paidAmount: Math.max(0, Number(item.paid_amount) || 0),
+      status: item.status as IPLPaymentStatus,
+      paidAt: item.paid_at || undefined,
+      transactionId:
+        item.transaction_id || transactionIds[0] || undefined,
+      transactionIds,
+      receiptNumber: item.receipt_number || undefined,
+      notes: item.notes || undefined,
+    };
+  });
+
+  // Cache lokal hanya untuk kompatibilitas dengan fungsi legacy.
+  // Source of truth tetap Supabase.
+  setStored<IPLPayment[]>(
+    STORAGE_KEYS.IPL_PAYMENTS,
+    payments
+  );
+
+  return payments;
+},
 
   /**
    * Pencatatan Pembayaran IPL dengan Relasi Utuh & Mencegah Duplikasi:
@@ -929,183 +1024,374 @@ export const DataService: IPortalDataRepository = {
    * Hanya pertambahan pembayaran (additionalPayment > 0) yang menghasilkan FinancialTransaction kas masuk baru.
    */
   async addIPLPayment(params: {
-    householdId: string;
-    period: string;
-    amount: number;
-    paidAmount: number;
-    paymentAmount?: number;
-    paymentMethod?: PaymentMethod;
-    notes?: string;
-    receiptNumber?: string;
-    referenceNo?: string;
-    recordedBy?: string;
-    date?: string;
-  }): Promise<{ payment: IPLPayment; transaction?: FinancialTransaction; additionalPayment?: number }> {
-    const parsedAmount = Math.round(Number(params.amount));
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      throw new Error('Tarif tagihan IPL harus lebih besar dari 0 Rupiah.');
-    }
-    if (!/^\d{4}-\d{2}$/.test(params.period)) {
-      throw new Error('Format periode IPL harus YYYY-MM (contoh: 2026-09).');
-    }
+  householdId: string;
+  period: string;
+  amount: number;
+  paidAmount: number;
+  paymentAmount?: number;
+  paymentMethod?: PaymentMethod;
+  notes?: string;
+  receiptNumber?: string;
+  referenceNo?: string;
+  recordedBy?: string;
+  date?: string;
+}): Promise<{
+  payment: IPLPayment;
+  transaction?: FinancialTransaction;
+  additionalPayment?: number;
+}> {
+  const parsedAmount = Math.round(Number(params.amount));
 
-    const households = this.getHouseholds();
-    const household = households.find((h) => h.id === params.householdId);
-    if (!household) {
-      throw new Error(`Data unit rumah (${params.householdId}) tidak ditemukan.`);
-    }
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    throw new Error('Tarif tagihan IPL harus lebih besar dari 0 Rupiah.');
+  }
 
-    // Cari existing payment record untuk (householdId, period)
-    const currentPayments = this.getIPLPayments();
-    const existingPayment = currentPayments.find(
-      (p) => p.householdId === params.householdId && p.period === params.period
+  if (!/^\d{4}-\d{2}$/.test(params.period)) {
+    throw new Error('Format periode IPL harus YYYY-MM (contoh: 2026-09).');
+  }
+
+  // ============================================================
+  // 1. Ambil data household langsung dari Supabase
+  // ============================================================
+  const { data: householdRow, error: householdError } = await supabase
+    .from('households')
+    .select(
+      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes'
+    )
+    .eq('id', params.householdId)
+    .single();
+
+  if (householdError || !householdRow) {
+    console.error(
+      '[DataService] Supabase addIPLPayment household error:',
+      householdError
     );
+    throw new Error(
+      householdError?.message ||
+        `Data unit rumah (${params.householdId}) tidak ditemukan.`
+    );
+  }
 
-    const existingPaid = existingPayment ? Math.max(0, Number(existingPayment.paidAmount) || 0) : 0;
+  const household: Household = {
+    id: householdRow.id,
+    houseNumber: householdRow.house_number,
+    residentName: householdRow.resident_name,
+    occupancyStatus:
+      householdRow.occupancy_status as Household['occupancyStatus'],
+    isActive: householdRow.is_active,
+    phone: householdRow.phone ?? undefined,
+    familyMembers: householdRow.family_members ?? undefined,
+    notes: householdRow.notes ?? undefined,
+  };
 
-    // Tentukan target total akumulasi pembayaran
-    let targetPaidAmount = existingPaid;
-    if (params.paymentAmount !== undefined) {
-      const pAmt = Math.round(Number(params.paymentAmount));
-      if (pAmt < 0) {
-        throw new Error('Nominal pembayaran tidak boleh bernilai negatif.');
+  // ============================================================
+  // 2. Cari IPL existing berdasarkan household + periode
+  // ============================================================
+  const { data: existingRow, error: existingError } = await supabase
+    .from('ipl_payments')
+    .select('*')
+    .eq('household_id', params.householdId)
+    .eq('period', params.period)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error(
+      '[DataService] Supabase addIPLPayment existing payment error:',
+      existingError
+    );
+    throw new Error(
+      existingError.message ||
+        'Gagal memeriksa pembayaran IPL yang sudah ada.'
+    );
+  }
+
+  const existingPayment: IPLPayment | undefined = existingRow
+    ? {
+        id: existingRow.id,
+        householdId: existingRow.household_id,
+        houseNumber: existingRow.house_number,
+        residentName: existingRow.resident_name,
+        period: existingRow.period,
+        amount: Math.max(0, Number(existingRow.amount) || 0),
+        paidAmount: Math.max(0, Number(existingRow.paid_amount) || 0),
+        status: existingRow.status as IPLPaymentStatus,
+        paidAt: existingRow.paid_at || undefined,
+        transactionId: existingRow.transaction_id || undefined,
+        receiptNumber: existingRow.receipt_number || undefined,
+        notes: existingRow.notes || undefined,
       }
-      targetPaidAmount = existingPaid + pAmt;
-    } else {
-      targetPaidAmount = Math.round(Number(params.paidAmount));
-    }
+    : undefined;
 
-    if (targetPaidAmount < 0) {
+  const existingPaid = existingPayment
+    ? Math.max(0, Number(existingPayment.paidAmount) || 0)
+    : 0;
+
+  // ============================================================
+  // 3. Hitung pembayaran tahap ini
+  // ============================================================
+  let targetPaidAmount = existingPaid;
+
+  if (params.paymentAmount !== undefined) {
+    const pAmt = Math.round(Number(params.paymentAmount));
+
+    if (isNaN(pAmt) || pAmt < 0) {
       throw new Error('Nominal pembayaran tidak boleh bernilai negatif.');
     }
 
-    // REQUIREMENT 6: Nominal pembayaran IPL tidak boleh melebihi tagihan.
-    if (targetPaidAmount > parsedAmount) {
-      throw new Error('Nominal pembayaran IPL tidak boleh melebihi tagihan.');
-    }
+    targetPaidAmount = existingPaid + pAmt;
+  } else {
+    targetPaidAmount = Math.round(Number(params.paidAmount));
+  }
 
-    // Hitung pembayaran tambahan (incremental)
-    const additionalPayment = targetPaidAmount - existingPaid;
+  if (isNaN(targetPaidAmount) || targetPaidAmount < 0) {
+    throw new Error('Nominal pembayaran tidak boleh bernilai negatif.');
+  }
 
-    // Status pembayaran
-    let status: IPLPaymentStatus = 'belum';
-    if (targetPaidAmount >= parsedAmount) {
-      status = 'lunas';
-    } else if (targetPaidAmount > 0) {
-      status = 'sebagian';
-    }
+  if (targetPaidAmount > parsedAmount) {
+    throw new Error(
+      'Nominal pembayaran IPL tidak boleh melebihi tagihan.'
+    );
+  }
 
-    const nowIso = new Date().toISOString();
-    const paymentDate = params.date || nowIso.split('T')[0];
-    const paymentId = existingPayment ? existingPayment.id : generateSafeId('ipl');
+  const additionalPayment = targetPaidAmount - existingPaid;
 
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<
-          ApiResponse<{ payment: IPLPayment; transaction?: FinancialTransaction; additionalPayment?: number }>
-        >('/ipl-payments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...params,
-            amount: parsedAmount,
-            paidAmount: targetPaidAmount,
-            additionalPayment,
-            houseNumber: household.houseNumber,
-            residentName: household.residentName,
-          }),
-        });
-        if (!json.success || !json.data) {
-          throw new Error(json.error || 'Gagal mencatat pembayaran IPL via Worker API');
-        }
-        emitDataChange();
-        return json.data;
-      } catch (err) {
-        console.error('[DataService] Worker addIPLPayment error:', err);
-        throw err;
-      }
-    }
+  // ============================================================
+  // 4. Tentukan status IPL
+  // ============================================================
+  let status: IPLPaymentStatus = 'belum';
 
-    // Local Mock: Generate transaction in Buku Kas HANYA jika ada penambahan dana (additionalPayment > 0)
-    let createdTransaction: FinancialTransaction | undefined;
-    if (additionalPayment > 0) {
-      const cleanPeriod = params.period.replace(/-/g, '');
-      const cleanHouse = household.houseNumber.replace(/[^a-zA-Z0-9]/g, '');
-      const currentTxIds = existingPayment?.transactionIds || (existingPayment?.transactionId ? [existingPayment.transactionId] : []);
-      const installmentIndex = currentTxIds.length + 1;
-      const receiptNum =
-        params.receiptNumber ||
-        `IPL-IN/${cleanPeriod}/${cleanHouse}${installmentIndex > 1 ? `-${installmentIndex}` : ''}`;
+  if (targetPaidAmount >= parsedAmount) {
+    status = 'lunas';
+  } else if (targetPaidAmount > 0) {
+    status = 'sebagian';
+  }
 
-      createdTransaction = {
-        id: generateSafeId('tx'),
-        date: paymentDate,
-        type: 'in',
-        category: 'iuran-bulanan',
-        description: `Iuran IPL Periode ${params.period} - ${household.houseNumber} (${household.residentName})${installmentIndex > 1 ? ` (Tahap ${installmentIndex})` : ''}`,
-        amount: additionalPayment,
-        receiptNumber: receiptNum,
-        payerOrRecipient: `${household.residentName} (${household.houseNumber})`,
-        paymentMethod: params.paymentMethod || 'transfer_bank',
-        referenceNo: params.referenceNo || undefined,
-        notes:
-          params.notes ||
-          `Pembayaran IPL ${status === 'lunas' ? 'Lunas' : 'Sebagian'} unit ${household.houseNumber}`,
-        status: 'active',
-        householdId: household.id,
-        houseNumber: household.houseNumber,
-        iplPaymentId: paymentId,
-        createdAt: nowIso,
-        updatedAt: nowIso,
-        createdBy: params.recordedBy || '',
-      };
+  const nowIso = new Date().toISOString();
+  const paymentDate = params.date || nowIso.split('T')[0];
 
-      const currentTxs = this.getTransactions(true);
-      setStored(STORAGE_KEYS.TRANSACTIONS, [createdTransaction, ...currentTxs]);
-    }
+  // Record IPL tetap satu untuk 1 household + 1 periode.
+  const paymentId =
+    existingPayment?.id || generateSafeId('ipl');
 
-    // Himpun seluruh transactionId untuk audit trail bertahap
-    const existingTxIds = existingPayment?.transactionIds
-      ? [...existingPayment.transactionIds]
-      : existingPayment?.transactionId
-      ? [existingPayment.transactionId]
-      : [];
+  // ============================================================
+  // 5. Cari transaksi IPL aktif yang sudah terhubung
+  //    untuk menentukan nomor tahap / audit trail
+  // ============================================================
+  const { data: existingTransactions, error: transactionLookupError } =
+    await supabase
+      .from('financial_transactions')
+      .select('id, receipt_number, date, amount')
+      .eq('ipl_payment_id', paymentId)
+      .eq('status', 'active')
+      .eq('type', 'in')
+      .order('date', { ascending: true });
 
-    const allTxIds = createdTransaction
-      ? [...existingTxIds, createdTransaction.id]
-      : existingTxIds;
+  if (transactionLookupError) {
+    console.error(
+      '[DataService] Supabase addIPLPayment transaction lookup error:',
+      transactionLookupError
+    );
+    throw new Error(
+      transactionLookupError.message ||
+        'Gagal memuat transaksi IPL yang sudah ada.'
+    );
+  }
 
-    const paymentRecord: IPLPayment = {
-      id: paymentId,
+  const currentTxIds = (existingTransactions ?? []).map(
+    (item) => item.id
+  );
+
+  const installmentIndex = currentTxIds.length + 1;
+
+  // ============================================================
+  // 6. Buat transaksi kas HANYA jika ada pembayaran tambahan
+  // ============================================================
+  let createdTransaction: FinancialTransaction | undefined;
+
+  if (additionalPayment > 0) {
+    const cleanPeriod = params.period.replace(/-/g, '');
+    const cleanHouse = household.houseNumber.replace(
+      /[^a-zA-Z0-9]/g,
+      ''
+    );
+
+    const receiptNum =
+      params.receiptNumber ||
+      `IPL-IN/${cleanPeriod}/${cleanHouse}${
+        installmentIndex > 1 ? `-${installmentIndex}` : ''
+      }`;
+
+    createdTransaction = await this.addTransaction({
+      date: paymentDate,
+      type: 'in',
+      category: 'iuran-bulanan',
+      description: `Iuran IPL Periode ${params.period} - ${household.houseNumber} (${household.residentName})${
+        installmentIndex > 1 ? ` (Tahap ${installmentIndex})` : ''
+      }`,
+      amount: additionalPayment,
+      receiptNumber: receiptNum,
+      payerOrRecipient: `${household.residentName} (${household.houseNumber})`,
+      paymentMethod:
+        params.paymentMethod || 'transfer_bank',
+      referenceNo: params.referenceNo || undefined,
+      notes:
+        params.notes ||
+        `Pembayaran IPL ${
+          status === 'lunas' ? 'Lunas' : 'Sebagian'
+        } unit ${household.houseNumber}`,
       householdId: household.id,
       houseNumber: household.houseNumber,
-      residentName: household.residentName,
-      period: params.period,
-      amount: parsedAmount,
-      paidAmount: targetPaidAmount,
-      status,
-      paidAt: targetPaidAmount > 0 ? (createdTransaction ? nowIso : existingPayment?.paidAt || nowIso) : undefined,
-      transactionId: existingPayment?.transactionId || createdTransaction?.id,
-      transactionIds: allTxIds,
-      receiptNumber: createdTransaction?.receiptNumber || existingPayment?.receiptNumber,
-      notes: params.notes !== undefined ? params.notes : existingPayment?.notes,
-      createdAt: existingPayment ? existingPayment.createdAt : nowIso,
-      updatedAt: nowIso,
-    };
+      iplPaymentId: paymentId,
+      createdBy: params.recordedBy || '',
+    });
 
-    // Update list: jika existing perbarui record yang sama (cegah duplicate)
-    let updatedPayments: IPLPayment[];
-    if (existingPayment) {
-      updatedPayments = currentPayments.map((p) => (p.id === paymentId ? paymentRecord : p));
-    } else {
-      updatedPayments = [paymentRecord, ...currentPayments];
+    currentTxIds.push(createdTransaction.id);
+  }
+
+  // ============================================================
+  // 7. Simpan / update record IPL di Supabase
+  //    HANYA menggunakan kolom yang memang ada di tabel.
+  // ============================================================
+  const transactionId =
+    existingPayment?.transactionId ||
+    currentTxIds[0] ||
+    undefined;
+
+  const receiptNumber =
+    createdTransaction?.receiptNumber ||
+    existingPayment?.receiptNumber ||
+    undefined;
+
+  const paidAt =
+    targetPaidAmount > 0
+      ? paymentDate
+      : undefined;
+
+  const paymentData = {
+    id: paymentId,
+    household_id: household.id,
+    house_number: household.houseNumber,
+    resident_name: household.residentName,
+    period: params.period,
+    amount: parsedAmount,
+    paid_amount: targetPaidAmount,
+    status,
+    paid_at: paidAt || null,
+    transaction_id: transactionId || null,
+    receipt_number: receiptNumber || null,
+    notes:
+      params.notes !== undefined
+        ? params.notes
+        : existingPayment?.notes || null,
+  };
+
+  let savedRow: any;
+
+  if (existingPayment) {
+    const { data, error } = await supabase
+      .from('ipl_payments')
+      .update({
+        household_id: paymentData.household_id,
+        house_number: paymentData.house_number,
+        resident_name: paymentData.resident_name,
+        period: paymentData.period,
+        amount: paymentData.amount,
+        paid_amount: paymentData.paid_amount,
+        status: paymentData.status,
+        paid_at: paymentData.paid_at,
+        transaction_id: paymentData.transaction_id,
+        receipt_number: paymentData.receipt_number,
+        notes: paymentData.notes,
+      })
+      .eq('id', paymentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase update IPL error:',
+        error
+      );
+      throw new Error(
+        error.message ||
+          'Gagal memperbarui pembayaran IPL di Supabase.'
+      );
     }
 
-    setStored(STORAGE_KEYS.IPL_PAYMENTS, updatedPayments);
-    emitDataChange();
+    savedRow = data;
+  } else {
+    const { data, error } = await supabase
+      .from('ipl_payments')
+      .insert(paymentData)
+      .select()
+      .single();
 
-    return { payment: paymentRecord, transaction: createdTransaction, additionalPayment };
-  },
+    if (error) {
+      console.error(
+        '[DataService] Supabase insert IPL error:',
+        error
+      );
+      throw new Error(
+        error.message ||
+          'Gagal menyimpan pembayaran IPL ke Supabase.'
+      );
+    }
+
+    savedRow = data;
+  }
+
+  // ============================================================
+  // 8. Bentuk object IPL untuk UI
+  // ============================================================
+  const paymentRecord: IPLPayment = {
+    id: savedRow.id,
+    householdId: savedRow.household_id,
+    houseNumber: savedRow.house_number,
+    residentName: savedRow.resident_name,
+    period: savedRow.period,
+    amount: Math.max(0, Number(savedRow.amount) || 0),
+    paidAmount: Math.max(
+      0,
+      Number(savedRow.paid_amount) || 0
+    ),
+    status: savedRow.status as IPLPaymentStatus,
+    paidAt: savedRow.paid_at || undefined,
+    transactionId:
+      savedRow.transaction_id ||
+      currentTxIds[0] ||
+      undefined,
+    transactionIds: currentTxIds,
+    receiptNumber:
+      savedRow.receipt_number || undefined,
+    notes: savedRow.notes || undefined,
+  };
+
+  // Cache hanya untuk kompatibilitas fungsi legacy.
+  const cachedPayments = this.getIPLPayments();
+
+  const updatedCache = cachedPayments.some(
+    (p) => p.id === paymentRecord.id
+  )
+    ? cachedPayments.map((p) =>
+        p.id === paymentRecord.id
+          ? paymentRecord
+          : p
+      )
+    : [paymentRecord, ...cachedPayments];
+
+  setStored<IPLPayment[]>(
+    STORAGE_KEYS.IPL_PAYMENTS,
+    updatedCache
+  );
+
+  emitDataChange();
+
+  return {
+    payment: paymentRecord,
+    transaction: createdTransaction,
+    additionalPayment,
+  };
+},
 
   async updateIPLPayment(payment: IPLPayment): Promise<IPLPayment> {
     const nowIso = new Date().toISOString();
@@ -1266,8 +1552,6 @@ export const DataService: IPortalDataRepository = {
       householdId: item.household_id || undefined,
       houseNumber: item.house_number || undefined,
       iplPaymentId: item.ipl_payment_id || undefined,
-      createdAt: item.created_at || undefined,
-      updatedAt: item.updated_at || undefined,
       createdBy: item.created_by || undefined,
       updatedBy: item.updated_by || undefined,
     }))
