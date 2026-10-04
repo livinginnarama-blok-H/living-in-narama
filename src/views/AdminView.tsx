@@ -73,33 +73,46 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [copiedWorker, setCopiedWorker] = useState(false);
 
   // Reactive subscription to DataService
-useEffect(() => {
-  let cancelled = false;
+  useEffect(() => {
+    let cancelled = false;
 
-  const loadHouseholds = async () => {
-    try {
-      const data = await DataService.fetchHouseholds();
+    const loadReports = async () => {
+      try {
+        const data = await DataService.fetchReports();
 
-      if (!cancelled) {
-        setHouseholds(data);
+        if (!cancelled) {
+          setReports(data);
+        }
+      } catch (err) {
+        console.error('[AdminView] Gagal memuat laporan warga:', err);
       }
-    } catch (err) {
-      console.error('[AdminView] Gagal memuat data warga:', err);
-    }
-  };
+    };
 
-  loadHouseholds();
+    const loadHouseholds = async () => {
+      try {
+        const data = await DataService.fetchHouseholds();
 
-  const unsubscribe = DataService.subscribe(() => {
-    setReports(DataService.getReports());
+        if (!cancelled) {
+          setHouseholds(data);
+        }
+      } catch (err) {
+        console.error('[AdminView] Gagal memuat data warga:', err);
+      }
+    };
+
+    void loadReports();
     void loadHouseholds();
-  });
 
-  return () => {
-    cancelled = true;
-    unsubscribe();
-  };
-}, []);
+    const unsubscribe = DataService.subscribe(() => {
+      void loadReports();
+      void loadHouseholds();
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
 
   const d1SchemaSql = DataService.generateD1SchemaSql();
   const workerCode = DataService.generateCloudflareWorkerExample();
@@ -121,10 +134,19 @@ useEffect(() => {
   }
 };
 
-  const handleUpdateReportStatus = (id: string, newStatus: CitizenReport['status']) => {
-    DataService.updateReportStatus(id, newStatus);
-    setReports(DataService.getReports());
-  };
+  const handleUpdateReportStatus = async (
+  id: string,
+  newStatus: CitizenReport['status']
+) => {
+  try {
+    await DataService.updateReportStatus(id, newStatus);
+
+    const data = await DataService.fetchReports();
+    setReports(data);
+  } catch (err) {
+    console.error('[AdminView] Gagal memperbarui status laporan:', err);
+  }
+};
   const resetHouseholdForm = () => {
   setHouseNumber('');
   setResidentName('');
@@ -886,80 +908,7 @@ const kosongCount = activeHouseholds.filter(
     </div>
   </div>
 )}
-      {/* Tab 2: Cloudflare Workers / D1 Readiness Console */}
-      {adminTab === 'cloudflare' && (
-        <div className="space-y-6">
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 space-y-2 text-xs text-emerald-950">
-            <div className="flex items-center gap-2 text-sm font-bold text-emerald-900">
-              <Cloud className="w-5 h-5 text-emerald-700" />
-              <span>Kesiapan Arsitektur Cloudflare Workers & D1 Database</span>
-            </div>
-            <p className="leading-relaxed">
-              Arsitektur aplikasi ini telah dimodularisasi penuh melalui <code className="font-mono bg-emerald-100 px-1 py-0.5 rounded">dataService.ts</code> dan model domain terpusat di <code className="font-mono bg-emerald-100 px-1 py-0.5 rounded">src/types/portal.ts</code>. Ketika beralih ke backend serverless Cloudflare Workers dan D1 SQLite Database, skrip DDL SQL di bawah ini dapat langsung di-deploy melalui Cloudflare Wrangler CLI.
-            </p>
-          </div>
 
-          {/* D1 SQL Schema Preview */}
-          <div className="bg-slate-900 text-slate-100 rounded-xl border border-slate-800 p-5 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2 text-xs font-mono font-semibold text-emerald-400">
-                <Terminal className="w-4 h-4" />
-                <span>schema.sql (Cloudflare D1 SQLite DDL)</span>
-              </div>
-              <button
-                onClick={handleCopySchema}
-                className="px-3 py-1 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md flex items-center gap-1.5 transition-colors border border-slate-700"
-              >
-                {copiedSchema ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedSchema ? 'Tersalin' : 'Salin SQL Schema'}</span>
-              </button>
-            </div>
-            <pre className="text-xs font-mono leading-relaxed overflow-x-auto max-h-72 p-2 scrollbar-thin text-slate-300">
-              {d1SchemaSql}
-            </pre>
-          </div>
-
-          {/* Cloudflare Worker Code Template */}
-          <div className="bg-slate-900 text-slate-100 rounded-xl border border-slate-800 p-5 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2 text-xs font-mono font-semibold text-emerald-400">
-                <FileCode className="w-4 h-4" />
-                <span>src/worker.ts (Cloudflare Workers API Handler)</span>
-              </div>
-              <button
-                onClick={handleCopyWorker}
-                className="px-3 py-1 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md flex items-center gap-1.5 transition-colors border border-slate-700"
-              >
-                {copiedWorker ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedWorker ? 'Tersalin' : 'Salin Worker Code'}</span>
-              </button>
-            </div>
-            <pre className="text-xs font-mono leading-relaxed overflow-x-auto max-h-64 p-2 scrollbar-thin text-slate-300">
-              {workerCode}
-            </pre>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 3: Pengaturan Data */}
-      {adminTab === 'data' && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-          <h3 className="text-base font-bold text-slate-900">Manajemen Data Mock Sementara</h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Semua manipulasi data di panel pengurus saat ini ditangani secara tersentralisasi melalui <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">dataService.ts</code>. Komponen antarmuka tidak mengakses penyimpanan peramban secara langsung.
-          </p>
-
-          <div className="pt-2">
-            <button
-              onClick={handleResetData}
-              className="px-4 py-2 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-lg flex items-center gap-1.5 transition-colors"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Reset Kembali ke Data Mock Awal Blok H</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

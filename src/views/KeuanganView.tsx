@@ -144,14 +144,26 @@ useEffect(() => {
   loadIPLPayments();
 
   const unsubscribe = DataService.subscribe(() => {
-    setTransactions(DataService.getTransactions(true));
-    setAvailableMonths(DataService.getAvailableTransactionMonths());
-    setMetrics(DataService.getFinancialMetrics(periodFilter));
-    void DataService.fetchIPLPayments().then(setIplPayments).catch((err) => {
-    console.error('[KeuanganView] Gagal memuat pembayaran IPL:', err);
+  void DataService.fetchTransactions(true)
+    .then((data) => {
+      if (!cancelled) {
+        setTransactions(data);
+        setAvailableMonths(DataService.getAvailableTransactionMonths());
+        setMetrics(DataService.getFinancialMetrics(periodFilter));
+      }
+    })
+    .catch((err) => {
+      console.error('[KeuanganView] Gagal memuat ulang transaksi:', err);
+    });
+
+  void DataService.fetchIPLPayments()
+    .then(setIplPayments)
+    .catch((err) => {
+      console.error('[KeuanganView] Gagal memuat pembayaran IPL:', err);
+    });
+
+  void loadHouseholds();
 });
-    void loadHouseholds();
-  });
 
   return () => {
     cancelled = true;

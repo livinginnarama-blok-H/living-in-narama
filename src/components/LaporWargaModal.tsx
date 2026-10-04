@@ -24,31 +24,47 @@ export const LaporWargaModal: React.FC<LaporWargaModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    console.log('[LaporWargaModal] handleSubmit terpanggil');
+
     if (!residentName || !houseNumber || !title || !description) return;
 
-    DataService.submitReport({
-      residentName,
-      houseNumber,
-      phone: phone || '-',
-      category,
-      title,
-      description,
-    });
+    try {
+      await DataService.submitReport({
+        residentName,
+        houseNumber,
+        phone: phone || '-',
+        category,
+        title,
+        description,
+      });
 
-    setIsSubmitted(true);
-    if (onSuccessSubmitted) onSuccessSubmitted();
+      setIsSubmitted(true);
 
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setResidentName('');
-      setHouseNumber('');
-      setPhone('');
-      setTitle('');
-      setDescription('');
-      onClose();
-    }, 1800);
+      if (onSuccessSubmitted) {
+        onSuccessSubmitted();
+      }
+
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setResidentName('');
+        setHouseNumber('');
+        setPhone('');
+        setTitle('');
+        setDescription('');
+        onClose();
+      }, 1800);
+    } catch (error) {
+      console.error('[LaporWargaModal] Gagal mengirim laporan:', error);
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Gagal mengirim laporan warga.'
+      );
+    }
   };
 
   return (

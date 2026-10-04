@@ -67,7 +67,18 @@ export const DATA_CONFIG = {
  * Standar tarif iuran per bulan untuk unit rumah Blok H.
  */
 export const DEFAULT_MONTHLY_IPL_FEE = 50000;
+const IPL_FEE_HUNI = 50000;
+const IPL_FEE_SEMI_HUNI = 25000;
 
+const getIPLFeeByOccupancyStatus = (
+  occupancyStatus?: Household['occupancyStatus']
+): number => {
+  if (occupancyStatus === 'semi-huni') {
+    return IPL_FEE_SEMI_HUNI;
+  }
+
+  return IPL_FEE_HUNI;
+};
 // Storage keys for local mock demo persistence
 const STORAGE_KEYS = {
   OPENING_BALANCE: 'narama_blok_h_opening_balance_v5',
@@ -359,6 +370,9 @@ export interface IPortalDataRepository {
   }): Promise<{ payment: IPLPayment; transaction?: FinancialTransaction; additionalPayment?: number }>;
   updateIPLPayment(payment: IPLPayment): Promise<IPLPayment>;
   getIPLRecap(period?: string): IPLRecap;
+fetchIPLRecap(period?: string): Promise<IPLRecap>;
+
+// Financials & Buku Kas
 
   // Financials & Buku Kas
   getOpeningBalance(): number;
@@ -367,6 +381,7 @@ export interface IPortalDataRepository {
   addTransaction(item: Omit<FinancialTransaction, 'id' | 'createdAt' | 'status'>): Promise<FinancialTransaction>;
   voidTransaction(id: string, reason?: string, voidedBy?: string): Promise<FinancialTransaction | null>;
   deleteTransaction(id: string): Promise<void>;
+  getFinancialMetrics(periodFilter?: FinancialPeriodFilter): FinancialSummary;
   getFinancialMetrics(periodFilter?: FinancialPeriodFilter): FinancialSummary;
   getAvailableTransactionMonths(): string[];
 
@@ -1495,7 +1510,149 @@ async deactivateHousehold(id: string): Promise<Household> {
       complianceRate,
     };
   },
+   async fetchIPLRecap(period?: string): Promise<IPLRecap> {
+  const targetPeriod = period || getCurrentSystemMonth();
 
+  // 1. Ambil household langsung dari Supabase
+  const { data: householdRows, error: householdError } = await supabase
+    .from('households')
+    .select('id, is_active');
+
+  if (householdError) {
+    console.error(
+      '[DataService] Supabase fetchIPLRecap households error:',
+      householdError
+    );
+    throw new Error(
+      householdError.message || 'Gagal memuat data rumah warga'
+    );
+  }
+
+  const activeHouseholds = (householdRows || []).filter(
+    (hh) => hh.is_active !== false
+  );
+
+  // 2. Ambil transaksi IPL dari Supabase
+  const { data: transactionRows, error: transactionError } = await supabase
+    .from('financial_transactions')
+    .select(
+      'id, date, description, type, category, amount, status, household_id, ipl_payment_id'
+    )
+    .eq('type', 'in')
+    .eq('category', 'iuran-bulanan')
+    .neq('status', 'void');
+
+  if (transactionError) {
+    console.error(
+      '[DataService] Supabase fetchIPLRecap transactions error:',
+      transactionError
+    );
+    throw new Error(
+      transactionError.message || 'Gagal memuat transaksi IPL'
+    );
+  }
+
+  const activeIplTxs = (transactionRows || []).filter((t) => {
+    const belongsToHousehold = Boolean(t.ipl_payment_id || t.household_id);
+    const belongsToPeriod =
+      String(t.date || '').startsWith(targetPeriod) ||
+      String(t.description || '').includes(targetPeriod);
+
+    return belongsToHousehold && belongsToPeriod;
+  });
+
+  // 3. Akumulasi pembayaran berdasarkan household
+  const paidByHousehold = new Map<string, number>();
+
+  activeIplTxs.forEach((t) => {
+    if (!t.household_id) return;
+
+    const current = paidByHousehold.get(t.household_id) || 0;
+
+    paidByHousehold.set(
+      t.household_id,
+      current + Math.max(0, Number(t.amount) || 0)
+    );
+  });
+
+  // 4. Fallback ke ipl_payments jika belum ada transaksi kas
+  const { data: paymentRows, error: paymentError } = await supabase
+    .from('ipl_payments')
+    .select('household_id, paid_amount')
+    .eq('period', targetPeriod);
+
+  if (paymentError) {
+    console.error(
+      '[DataService] Supabase fetchIPLRecap payments error:',
+      paymentError
+    );
+    throw new Error(
+      paymentError.message || 'Gagal memuat data pembayaran IPL'
+    );
+  }
+
+  (paymentRows || []).forEach((payment) => {
+    if (!payment.household_id) return;
+
+    // Hanya fallback jika belum ada transaksi kas.
+    if (!paidByHousehold.has(payment.household_id)) {
+      paidByHousehold.set(
+        payment.household_id,
+        Math.max(0, Number(payment.paid_amount) || 0)
+      );
+    }
+  });
+
+  // 5. Hitung recap
+  let paidCount = 0;
+  let partialCount = 0;
+  let collectedAmount = 0;
+
+  const standardFee = DEFAULT_MONTHLY_IPL_FEE;
+
+  activeHouseholds.forEach((hh) => {
+    const activePaid = paidByHousehold.get(hh.id) || 0;
+
+    collectedAmount += activePaid;
+
+    if (activePaid >= standardFee) {
+      paidCount++;
+    } else if (activePaid > 0) {
+      partialCount++;
+    }
+  });
+
+  const totalHh = activeHouseholds.length;
+
+  const unpaidCount = Math.max(
+    0,
+    totalHh - paidCount - partialCount
+  );
+
+  const expectedAmount = totalHh * standardFee;
+
+  const outstandingAmount = Math.max(
+    0,
+    expectedAmount - collectedAmount
+  );
+
+  const complianceRate =
+    totalHh > 0
+      ? Math.round((paidCount / totalHh) * 100)
+      : 0;
+
+  return {
+    period: targetPeriod,
+    totalHouseholds: totalHh,
+    paidHouseholds: paidCount,
+    unpaidHouseholds: unpaidCount,
+    partialHouseholds: partialCount,
+    expectedAmount,
+    collectedAmount,
+    outstandingAmount,
+    complianceRate,
+  };
+},
   // ==========================================
   // 6. FINANCIAL TRANSACTIONS & BUKU KAS
   // ==========================================
@@ -1558,13 +1715,11 @@ async deactivateHousehold(id: string): Promise<Household> {
     .filter((item) => includeVoid || item.status !== 'void');
 
   setStored<FinancialTransaction[]>(
-    STORAGE_KEYS.TRANSACTIONS,
-    transactions
-  );
+  STORAGE_KEYS.TRANSACTIONS,
+  transactions
+);
 
-  emitDataChange();
-
-  return transactions;
+return transactions;
 },
 
   async addTransaction(
@@ -1925,7 +2080,15 @@ async deactivateHousehold(id: string): Promise<Household> {
       .getPublicUrl(filePath);
 
     const imageUrl = publicUrlData.publicUrl;
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
+    console.log('[DataService] Documentation insert auth:', {
+      authenticated: !!session,
+      userId: session?.user?.id,
+      email: session?.user?.email,
+    });
     // 3. Simpan metadata ke tabel documentation
     const { data, error } = await supabase
       .from('documentation')
@@ -2189,23 +2352,49 @@ async deactivateHousehold(id: string): Promise<Household> {
   },
 
   async fetchReports(): Promise<CitizenReport[]> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<CitizenReport[]>>('/reports');
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal memuat laporan warga dari Worker API');
-        }
-        return json.data || [];
-      } catch (err) {
-        console.error('[DataService] Worker fetchReports error:', err);
-        throw err;
-      }
-    }
-    return this.getReports();
-  },
+  if (DATA_CONFIG.mode === 'cloudflare_worker') {
+    try {
+      const json = await safeFetch<ApiResponse<CitizenReport[]>>('/reports');
 
-  async submitReport(report: Omit<CitizenReport, 'id' | 'date' | 'status' | 'createdAt'>): Promise<CitizenReport> {
+      if (!json.success) {
+        throw new Error(json.error || 'Gagal memuat laporan warga dari Worker API');
+      }
+
+      return json.data || [];
+    } catch (err) {
+      console.error('[DataService] Worker fetchReports error:', err);
+      throw err;
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('citizen_reports')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[DataService] Supabase fetchReports error:', error);
+    throw new Error(error.message || 'Gagal memuat laporan warga');
+  }
+
+  return (data ?? []).map((item) => ({
+    id: item.id,
+    date: item.date,
+    residentName: item.resident_name,
+    houseNumber: item.house_number,
+    phone: item.phone,
+    category: item.category,
+    title: item.title,
+    description: item.description,
+    status: item.status,
+    createdAt: item.created_at,
+  }));
+},
+  async submitReport(
+    report: Omit<CitizenReport, 'id' | 'date' | 'status' | 'createdAt'>
+  ): Promise<CitizenReport> {
     const today = new Date().toISOString().split('T')[0];
+
     const newReport: CitizenReport = {
       ...report,
       id: generateSafeId('rep'),
@@ -2221,9 +2410,13 @@ async deactivateHousehold(id: string): Promise<Household> {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newReport),
         });
+
         if (!json.success || !json.data) {
-          throw new Error(json.error || 'Gagal mengirim aspirasi via Worker API');
+          throw new Error(
+            json.error || 'Gagal mengirim aspirasi via Worker API'
+          );
         }
+
         emitDataChange();
         return json.data;
       } catch (err) {
@@ -2232,37 +2425,89 @@ async deactivateHousehold(id: string): Promise<Household> {
       }
     }
 
-    const current = this.getReports();
-    const updated = [newReport, ...current];
-    setStored(STORAGE_KEYS.REPORTS, updated);
-    emitDataChange();
-    return newReport;
-  },
+    const { data, error } = await supabase
+      .from('citizen_reports')
+      .insert({
+        id: newReport.id,
+        date: newReport.date,
+        resident_name: newReport.residentName,
+        house_number: newReport.houseNumber,
+        phone: newReport.phone,
+        category: newReport.category,
+        title: newReport.title,
+        description: newReport.description,
+        status: newReport.status,
+        created_at: newReport.createdAt,
+      })
+      .select('*')
+      .single();
 
-  async updateReportStatus(id: string, status: CitizenReport['status']): Promise<void> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<void>>(`/reports/${id}/status`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status }),
-        });
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal memperbarui status laporan via Worker API');
-        }
-        emitDataChange();
-        return;
-      } catch (err) {
-        console.error('[DataService] Worker updateReportStatus error:', err);
-        throw err;
-      }
+    if (error) {
+      console.error('[DataService] Supabase submitReport error:', error);
+      throw new Error(error.message || 'Gagal mengirim laporan warga');
     }
 
-    const current = this.getReports();
-    const updated = current.map((r) => (r.id === id ? { ...r, status } : r));
-    setStored(STORAGE_KEYS.REPORTS, updated);
+    const savedReport: CitizenReport = {
+      id: data.id,
+      date: data.date,
+      residentName: data.resident_name,
+      houseNumber: data.house_number,
+      phone: data.phone,
+      category: data.category,
+      title: data.title,
+      description: data.description,
+      status: data.status,
+      createdAt: data.created_at,
+    };
+
     emitDataChange();
+    return savedReport;
   },
+
+  async updateReportStatus(
+  id: string,
+  status: CitizenReport['status']
+): Promise<void> {
+  if (DATA_CONFIG.mode === 'cloudflare_worker') {
+    try {
+      const json = await safeFetch<ApiResponse<void>>(`/reports/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+
+      if (!json.success) {
+        throw new Error(
+          json.error || 'Gagal memperbarui status laporan via Worker API'
+        );
+      }
+
+      emitDataChange();
+      return;
+    } catch (err) {
+      console.error('[DataService] Worker updateReportStatus error:', err);
+      throw err;
+    }
+  }
+
+  const { error } = await supabase
+    .from('citizen_reports')
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error(
+      '[DataService] Supabase updateReportStatus error:',
+      error
+    );
+    throw new Error(error.message || 'Gagal memperbarui status laporan');
+  }
+
+  emitDataChange();
+},
 
 // ==========================================
 // 9. RONDA / SISKAMLING SCHEDULE
