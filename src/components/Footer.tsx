@@ -119,6 +119,28 @@ export const Footer: React.FC<FooterProps> = ({
                   <span>Administrasi Pengurus</span>
                 </button>
               </li>
+                            <li>
+                <a
+                  href="mailto:livinginnarama@gmail.com"
+                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                >
+                  <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Email Resmi</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.instagram.com/livinginnarama/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                >
+                  <span className="w-3.5 h-3.5 flex items-center justify-center text-[8px] font-bold text-emerald-400">
+                    IG
+                  </span>
+                  <span>Instagram @livinginnarama</span>
+                </a>
+              </li>
             </ul>
           </div>
         </div>
