@@ -244,25 +244,35 @@ const upcomingAgendas = agendas
               <PhoneCall className="w-4 h-4 text-rose-300" />
               <span>Kontak Satpam</span>
             </button>
-              <a
-    href="mailto:livinginnarama@gmail.com"
-    className="px-4 py-2.5 text-xs sm:text-sm font-medium rounded-xl bg-white/10 hover:bg-white/15 text-white border border-emerald-600/40 transition-colors flex items-center gap-2"
-  >
-    <Mail className="w-4 h-4 text-emerald-300" />
-    <span>Email Kami</span>
-  </a>
+                          <a
+              href="mailto:livinginnarama@gmail.com"
+              className="px-4 py-2.5 text-xs sm:text-sm font-medium rounded-xl bg-white/10 hover:bg-white/15 text-white border border-emerald-600/40 transition-colors flex items-center gap-2"
+            >
+              <Mail className="w-4 h-4 text-emerald-300 shrink-0" />
+              <span>
+                <span className="block">Email</span>
+                <span className="block text-[10px] text-emerald-200/80 font-normal">
+                  livinginnarama@gmail.com
+                </span>
+              </span>
+            </a>
 
-  <a
-    href="https://www.instagram.com/livinginnarama/"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="px-4 py-2.5 text-xs sm:text-sm font-medium rounded-xl bg-white/10 hover:bg-white/15 text-white border border-emerald-600/40 transition-colors flex items-center gap-2"
-  >
-    <span className="w-4 h-4 flex items-center justify-center text-emerald-300 font-bold text-[11px]">
-      IG
-    </span>
-    <span>Instagram</span>
-  </a>
+            <a
+              href="https://www.instagram.com/livinginnarama/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2.5 text-xs sm:text-sm font-medium rounded-xl bg-white/10 hover:bg-white/15 text-white border border-emerald-600/40 transition-colors flex items-center gap-2"
+            >
+              <span className="w-4 h-4 flex items-center justify-center text-emerald-300 font-bold text-[10px] shrink-0">
+                IG
+              </span>
+              <span>
+                <span className="block">Instagram</span>
+                <span className="block text-[10px] text-emerald-200/80 font-normal">
+                  @livinginnarama
+                </span>
+              </span>
+            </a>
           </div>
         </div>
 
