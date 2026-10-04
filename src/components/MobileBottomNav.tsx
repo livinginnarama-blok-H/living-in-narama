@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TabKey } from '../types/portal';
-import { Home, Bell, Calendar, Wallet, MoreHorizontal, Briefcase, Camera, Lock, X, Users } from 'lucide-react';
+import { Home, Bell, Calendar, Wallet, MoreHorizontal, Camera, Lock, X, Users } from 'lucide-react';
 
 interface MobileBottomNavProps {
   activeTab: TabKey;
@@ -21,7 +21,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   };
 
   const isMoreActive =
-  activeTab === 'proker' ||
+  activeTab === 'komunitas' ||
   activeTab === 'dokumentasi' ||
   activeTab === 'pengurus' ||
   activeTab === 'admin';
@@ -50,16 +50,16 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
             <div className="grid grid-cols-4 gap-3 py-2">
               <button
-                onClick={() => handleSelect('proker')}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-colors min-h-[72px] ${
-                  activeTab === 'proker'
-                    ? 'border-emerald-700 bg-emerald-50 text-emerald-900'
-                    : 'border-slate-100 bg-slate-50 text-slate-700'
-                }`}
-              >
-                <Briefcase className="w-5 h-5 mb-1.5 text-emerald-700" />
-                <span className="text-xs font-medium">Program Kerja</span>
-              </button>
+  onClick={() => handleSelect('komunitas')}
+  className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-colors min-h-[72px] ${
+    activeTab === 'komunitas'
+      ? 'border-emerald-700 bg-emerald-50 text-emerald-900'
+      : 'border-slate-100 bg-slate-50 text-slate-700'
+  }`}
+>
+  <Users className="w-5 h-5 mb-1.5 text-emerald-700" />
+  <span className="text-xs font-medium">Komunitas</span>
+</button>
 
               <button
                 onClick={() => handleSelect('dokumentasi')}

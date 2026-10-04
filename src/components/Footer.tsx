@@ -69,10 +69,10 @@ export const Footer: React.FC<FooterProps> = ({
               </li>
               <li>
                 <button
-                  onClick={() => onSelectTab('proker')}
+                  onClick={() => onSelectTab('komunitas')}
                   className="hover:text-white transition-colors"
                 >
-                  Program Kerja Pengurus
+                  Komunitas Blok H
                 </button>
               </li>
               <li>

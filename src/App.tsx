@@ -16,7 +16,7 @@ import { AuthService } from './services/authService';
 import { BerandaView } from './views/BerandaView';
 import { PengumumanView } from './views/PengumumanView';
 import { AgendaView } from './views/AgendaView';
-import { ProgramKerjaView } from './views/ProgramKerjaView';
+import KomunitasView from './views/KomunitasView';
 import { KeuanganView } from './views/KeuanganView';
 import { DokumentasiView } from './views/DokumentasiView';
 import PengurusView from './views/PengurusView';
@@ -32,7 +32,7 @@ export default function App() {
     case '/agenda':
       return 'agenda';
     case '/program-kerja':
-      return 'proker';
+      return 'komunitas';
     case '/keuangan':
       return 'keuangan';
     case '/dokumentasi':
@@ -86,7 +86,7 @@ const [activeTab, setActiveTab] = useState<TabKey>(getTabFromPath());
     beranda: '/',
     pengumuman: '/pengumuman',
     agenda: '/agenda',
-    proker: '/program-kerja',
+    komunitas: '/komunitas',
     keuangan: '/keuangan',
     dokumentasi: '/dokumentasi',
     pengurus: '/pengurus',
@@ -140,7 +140,7 @@ setActiveTab('beranda');
 
         {activeTab === 'agenda' && <AgendaView isAdmin={isAdmin} />}
 
-        {activeTab === 'proker' && <ProgramKerjaView isAdmin={isAdmin} />}
+        {activeTab === 'komunitas' && <KomunitasView isAdmin={isAdmin} />}
 
         {activeTab === 'keuangan' && <KeuanganView isAdmin={isAdmin} />}
 

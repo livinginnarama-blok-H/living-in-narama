@@ -4,7 +4,6 @@ import gardenImage from '@/src/assets/images/neighborhood_garden_park_1790351090
 import {
   Announcement,
   AgendaItem,
-  WorkProgram,
   FinanceTransaction,
   DocumentationItem,
   CitizenReport,
@@ -26,8 +25,6 @@ import {
 export const INITIAL_ANNOUNCEMENTS: Announcement[] = [];
 
 export const INITIAL_AGENDAS: AgendaItem[] = [];
-  
-export const INITIAL_WORK_PROGRAMS: WorkProgram[] = [];
 
 /**
  * Saldo Kas Awal Pembukuan Paguyuban (Mock Data)

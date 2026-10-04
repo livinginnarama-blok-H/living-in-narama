@@ -24,9 +24,9 @@
  */
 import { supabase } from '../lib/supabase';
 import {
+  CommunityGroupCategory,
   Announcement,
   EventAgenda,
-  Program,
   FinancialTransaction,
   FinancialSummary,
   FinancialPeriodFilter,
@@ -40,11 +40,12 @@ import {
   IPLRecap,
   PaymentMethod,
   OrganizationMember,
+  CommunityGroup,
+  CommunityAchievement,
 } from '../types/portal';
 import {
   INITIAL_ANNOUNCEMENTS,
   INITIAL_AGENDAS,
-  INITIAL_WORK_PROGRAMS,
   INITIAL_TRANSACTIONS,
   INITIAL_OPENING_BALANCE,
   INITIAL_DOCUMENTATION,
@@ -86,7 +87,6 @@ const STORAGE_KEYS = {
   TRANSACTIONS: 'narama_blok_h_transactions_v5',
   ANNOUNCEMENTS: 'narama_blok_h_announcements_v4',
   AGENDAS: 'narama_blok_h_agendas_v4',
-  WORK_PROGRAMS: 'narama_blok_h_prokers_v4',
   DOCUMENTATION: 'narama_blok_h_docs_v4',
   REPORTS: 'narama_blok_h_reports_v4',
   HOUSEHOLDS: 'narama_blok_h_households_v1',
@@ -358,13 +358,45 @@ updateOrganizationMember(
 ): Promise<OrganizationMember>;
 
 deleteOrganizationMember(id: string): Promise<void>;
-  // Programs
-  getWorkPrograms(): Program[];
-  fetchWorkPrograms(): Promise<Program[]>;
-  updateWorkProgram(program: Program): Promise<void>;
-  addWorkProgram(item: Omit<Program, 'id' | 'createdAt'>): Promise<Program>;
 
-  // Households (Data Rumah Warga)
+  // Community / Komunitas
+  fetchCommunityGroups(): Promise<CommunityGroup[]>;
+
+  addCommunityGroup(
+    item: Omit<CommunityGroup, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<CommunityGroup>;
+
+  updateCommunityGroup(
+    id: string,
+    item: Partial<Omit<CommunityGroup, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<CommunityGroup>;
+
+  deleteCommunityGroup(id: string): Promise<void>;
+
+  uploadCommunityGroupPhoto(
+  groupId: string,
+  category: CommunityGroupCategory,
+  imageFile: File
+): Promise<string>;
+
+  fetchCommunityAchievements(): Promise<CommunityAchievement[]>;
+
+  addCommunityAchievement(
+    item: Omit<CommunityAchievement, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<CommunityAchievement>;
+
+  updateCommunityAchievement(
+    id: string,
+    item: Partial<Omit<CommunityAchievement, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<CommunityAchievement>;
+
+  deleteCommunityAchievement(id: string): Promise<void>;
+
+  uploadCommunityAchievementPhoto(
+    achievementId: string,
+    imageFile: File
+  ): Promise<string>;
+    // Households (Data Rumah Warga)
   getHouseholds(): Household[];
   fetchHouseholds(): Promise<Household[]>;
   addHousehold(item: Omit<Household, 'id' | 'createdAt' | 'updatedAt'>): Promise<Household>;
@@ -635,6 +667,398 @@ export const DataService: IPortalDataRepository = {
     }));
 
     return members;
+  },
+    // ==========================================================
+  // Community / Komunitas
+  // ==========================================================
+
+  async fetchCommunityGroups(): Promise<CommunityGroup[]> {
+    const { data, error } = await supabase
+      .from('community_groups')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase fetchCommunityGroups error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal memuat data komunitas'
+      );
+    }
+
+    return (data || []).map((item) => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      description: item.description,
+      photoUrl: item.photo_url,
+      activityInfo: item.activity_info,
+      schedule: item.schedule,
+      whatsappGroupUrl: item.whatsapp_group_url,
+      displayOrder: item.display_order,
+      isActive: item.is_active,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    }));
+  },
+
+  async addCommunityGroup(
+    item: Omit<CommunityGroup, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<CommunityGroup> {
+    const { data, error } = await supabase
+      .from('community_groups')
+      .insert({
+        name: item.name,
+        category: item.category,
+        description: item.description,
+        photo_url: item.photoUrl,
+        activity_info: item.activityInfo,
+        schedule: item.schedule,
+        whatsapp_group_url: item.whatsappGroupUrl,
+        display_order: item.displayOrder,
+        is_active: item.isActive,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase addCommunityGroup error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal menambahkan komunitas'
+      );
+    }
+
+    const group: CommunityGroup = {
+      id: data.id,
+      name: data.name,
+      category: data.category,
+      description: data.description,
+      photoUrl: data.photo_url,
+      activityInfo: data.activity_info,
+      schedule: data.schedule,
+      whatsappGroupUrl: data.whatsapp_group_url,
+      displayOrder: data.display_order,
+      isActive: data.is_active,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+
+
+    return group;
+  },
+
+  async updateCommunityGroup(
+    id: string,
+    item: Partial<Omit<CommunityGroup, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<CommunityGroup> {
+    const payload: Record<string, unknown> = {};
+
+    if (item.name !== undefined) payload.name = item.name;
+    if (item.category !== undefined) payload.category = item.category;
+    if (item.description !== undefined) payload.description = item.description;
+    if (item.photoUrl !== undefined) payload.photo_url = item.photoUrl;
+    if (item.activityInfo !== undefined) payload.activity_info = item.activityInfo;
+    if (item.schedule !== undefined) payload.schedule = item.schedule;
+    if (item.whatsappGroupUrl !== undefined) {
+      payload.whatsapp_group_url = item.whatsappGroupUrl;
+    }
+    if (item.displayOrder !== undefined) {
+      payload.display_order = item.displayOrder;
+    }
+    if (item.isActive !== undefined) {
+      payload.is_active = item.isActive;
+    }
+
+    const { data, error } = await supabase
+      .from('community_groups')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase updateCommunityGroup error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal memperbarui komunitas'
+      );
+    }
+
+    const group: CommunityGroup = {
+      id: data.id,
+      name: data.name,
+      category: data.category,
+      description: data.description,
+      photoUrl: data.photo_url,
+      activityInfo: data.activity_info,
+      schedule: data.schedule,
+      whatsappGroupUrl: data.whatsapp_group_url,
+      displayOrder: data.display_order,
+      isActive: data.is_active,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+
+    
+    return group;
+  },
+
+  async deleteCommunityGroup(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('community_groups')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase deleteCommunityGroup error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal menghapus komunitas'
+      );
+    }
+
+    
+  },
+
+  async uploadCommunityGroupPhoto(
+  groupId: string,
+  category: CommunityGroupCategory,
+  imageFile: File
+): Promise<string> {
+    const extension =
+      imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+
+    const filePath = `${groupId}-${Date.now()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('community')
+      .upload(`${category}/${filePath}`, imageFile, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error(
+        '[DataService] Supabase uploadCommunityGroupPhoto error:',
+        uploadError
+      );
+
+      throw new Error(
+        uploadError.message || 'Gagal mengunggah foto komunitas'
+      );
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('community')
+      .getPublicUrl(`${category}/${filePath}`);
+
+    return publicUrlData.publicUrl;
+  },
+
+  async fetchCommunityAchievements(): Promise<CommunityAchievement[]> {
+    const { data, error } = await supabase
+      .from('community_achievements')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase fetchCommunityAchievements error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal memuat galeri prestasi'
+      );
+    }
+
+    return (data || []).map((item) => ({
+      id: item.id,
+      title: item.title,
+      recipient: item.recipient,
+      description: item.description,
+      achievementDate: item.achievement_date,
+      photoUrl: item.photo_url,
+      displayOrder: item.display_order,
+      isActive: item.is_active,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    }));
+  },
+
+  async addCommunityAchievement(
+    item: Omit<CommunityAchievement, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<CommunityAchievement> {
+    const { data, error } = await supabase
+      .from('community_achievements')
+      .insert({
+        title: item.title,
+        recipient: item.recipient,
+        description: item.description,
+        achievement_date: item.achievementDate,
+        photo_url: item.photoUrl,
+        display_order: item.displayOrder,
+        is_active: item.isActive,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase addCommunityAchievement error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal menambahkan prestasi'
+      );
+    }
+
+    const achievement: CommunityAchievement = {
+      id: data.id,
+      title: data.title,
+      recipient: data.recipient,
+      description: data.description,
+      achievementDate: data.achievement_date,
+      photoUrl: data.photo_url,
+      displayOrder: data.display_order,
+      isActive: data.is_active,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+
+    
+    return achievement;
+  },
+
+  async updateCommunityAchievement(
+    id: string,
+    item: Partial<
+      Omit<CommunityAchievement, 'id' | 'createdAt' | 'updatedAt'>
+    >
+  ): Promise<CommunityAchievement> {
+    const payload: Record<string, unknown> = {};
+
+    if (item.title !== undefined) payload.title = item.title;
+    if (item.recipient !== undefined) payload.recipient = item.recipient;
+    if (item.description !== undefined) {
+      payload.description = item.description;
+    }
+    if (item.achievementDate !== undefined) {
+      payload.achievement_date = item.achievementDate;
+    }
+    if (item.photoUrl !== undefined) {
+      payload.photo_url = item.photoUrl;
+    }
+    if (item.displayOrder !== undefined) {
+      payload.display_order = item.displayOrder;
+    }
+    if (item.isActive !== undefined) {
+      payload.is_active = item.isActive;
+    }
+
+    const { data, error } = await supabase
+      .from('community_achievements')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase updateCommunityAchievement error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal memperbarui prestasi'
+      );
+    }
+
+    const achievement: CommunityAchievement = {
+      id: data.id,
+      title: data.title,
+      recipient: data.recipient,
+      description: data.description,
+      achievementDate: data.achievement_date,
+      photoUrl: data.photo_url,
+      displayOrder: data.display_order,
+      isActive: data.is_active,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+
+    
+    return achievement;
+  },
+
+  async deleteCommunityAchievement(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('community_achievements')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase deleteCommunityAchievement error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal menghapus prestasi'
+      );
+    }
+
+   
+  },
+
+  async uploadCommunityAchievementPhoto(
+    achievementId: string,
+    imageFile: File
+  ): Promise<string> {
+    const extension =
+      imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+
+    const filePath = `${achievementId}-${Date.now()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('community')
+      .upload(`prestasi/${filePath}`, imageFile, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error(
+        '[DataService] Supabase uploadCommunityAchievementPhoto error:',
+        uploadError
+      );
+
+      throw new Error(
+        uploadError.message || 'Gagal mengunggah foto prestasi'
+      );
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('community')
+      .getPublicUrl(`prestasi/${filePath}`);
+
+    return publicUrlData.publicUrl;
   },
   async uploadOrganizationMemberPhoto(
   memberId: string,
@@ -912,87 +1336,8 @@ async deleteOrganizationMember(
     emitDataChange();
   },
 
-  // ==========================================
-  // 3. WORK PROGRAMS
-  // ==========================================
-  getWorkPrograms(): Program[] {
-    return getStored<Program[]>(STORAGE_KEYS.WORK_PROGRAMS, INITIAL_WORK_PROGRAMS);
-  },
-
-  async fetchWorkPrograms(): Promise<Program[]> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<Program[]>>('/programs');
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal memuat program kerja dari Worker API');
-        }
-        return json.data || [];
-      } catch (err) {
-        console.error('[DataService] Worker fetchWorkPrograms error:', err);
-        throw err;
-      }
-    }
-    return this.getWorkPrograms();
-  },
-
-  async updateWorkProgram(updatedProgram: Program): Promise<void> {
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<Program>>(`/programs/${updatedProgram.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedProgram),
-        });
-        if (!json.success) {
-          throw new Error(json.error || 'Gagal memperbarui program kerja via Worker API');
-        }
-        emitDataChange();
-        return;
-      } catch (err) {
-        console.error('[DataService] Worker updateWorkProgram error:', err);
-        throw err;
-      }
-    }
-
-    const current = this.getWorkPrograms();
-    const updated = current.map((p) => (p.id === updatedProgram.id ? updatedProgram : p));
-    setStored(STORAGE_KEYS.WORK_PROGRAMS, updated);
-    emitDataChange();
-  },
-
-  async addWorkProgram(item: Omit<Program, 'id' | 'createdAt'>): Promise<Program> {
-    const newItem: Program = {
-      ...item,
-      id: generateSafeId('wp'),
-      createdAt: new Date().toISOString(),
-    };
-
-    if (DATA_CONFIG.mode === 'cloudflare_worker') {
-      try {
-        const json = await safeFetch<ApiResponse<Program>>('/programs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newItem),
-        });
-        if (!json.success || !json.data) {
-          throw new Error(json.error || 'Gagal menambah program kerja via Worker API');
-        }
-        emitDataChange();
-        return json.data;
-      } catch (err) {
-        console.error('[DataService] Worker addWorkProgram error:', err);
-        throw err;
-      }
-    }
-
-    const current = this.getWorkPrograms();
-    const updated = [...current, newItem];
-    setStored(STORAGE_KEYS.WORK_PROGRAMS, updated);
-    emitDataChange();
-    return newItem;
-  },
-
-  // ==========================================
+  
+    // ==========================================
 // 4. HOUSEHOLDS (DATA RUMAH WARGA)
 // ==========================================
 getHouseholds(): Household[] {
@@ -2899,7 +3244,6 @@ async deleteRondaSchedule(id: string): Promise<void> {
       localStorage.removeItem(STORAGE_KEYS.OPENING_BALANCE);
       localStorage.removeItem(STORAGE_KEYS.ANNOUNCEMENTS);
       localStorage.removeItem(STORAGE_KEYS.AGENDAS);
-      localStorage.removeItem(STORAGE_KEYS.WORK_PROGRAMS);
       localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
       localStorage.removeItem(STORAGE_KEYS.DOCUMENTATION);
       localStorage.removeItem(STORAGE_KEYS.REPORTS);

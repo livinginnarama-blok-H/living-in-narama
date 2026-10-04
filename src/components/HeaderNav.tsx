@@ -78,14 +78,14 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
               Agenda
             </button>
             <button
-              onClick={() => onSelectTab('proker')}
+              onClick={() => onSelectTab('komunitas')}
               className={`px-3 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
-                activeTab === 'proker'
+                activeTab === 'komunitas'
                   ? 'text-emerald-800 bg-emerald-50/80 font-semibold'
                   : 'text-slate-600 hover:text-emerald-800 hover:bg-slate-50'
               }`}
             >
-              Program Kerja
+              Komunitas
             </button>
             <button
               onClick={() => onSelectTab('keuangan')}

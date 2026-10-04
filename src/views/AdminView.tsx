@@ -5,6 +5,9 @@ import {
   Household,
   OccupancyStatus,
   OrganizationMember,
+  CommunityGroup,
+  CommunityGroupCategory,
+  CommunityAchievement,
 } from '../types/portal';
 import { DataService } from '../services/dataService';
 import { AuthService } from '../services/authService';
@@ -55,8 +58,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   // Admin sub-tabs: Laporan Warga vs Cloudflare D1 Console vs Pengaturan Data
   const [adminTab, setAdminTab] = useState<
-  'laporan' | 'warga' | 'pengurus' | 'cloudflare' | 'data'
->('laporan'); 
+  'laporan' | 'warga' | 'pengurus' | 'komunitas' | 'cloudflare' | 'data'
+>('laporan');
   const [reports, setReports] = useState<CitizenReport[]>(() => DataService.getReports());
   const [households, setHouseholds] = useState<Household[]>([]);
   const [householdSearch, setHouseholdSearch] = useState('');
@@ -67,6 +70,62 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [organizationMembers, setOrganizationMembers] = useState<
   OrganizationMember[]
 >([]);
+const [communityGroups, setCommunityGroups] = useState<CommunityGroup[]>(
+  []
+);
+
+const [communityAchievements, setCommunityAchievements] = useState<
+  CommunityAchievement[]
+>([]);
+
+const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
+
+const [communityError, setCommunityError] = useState<string | null>(null);
+const [isCommunityAchievementModalOpen, setIsCommunityAchievementModalOpen] =
+  useState(false);
+const [editingCommunityAchievement, setEditingCommunityAchievement] =
+  useState<CommunityAchievement | null>(null);
+const [isSavingCommunityAchievement, setIsSavingCommunityAchievement] =
+  useState(false);
+
+const [communityAchievementTitle, setCommunityAchievementTitle] =
+  useState('');
+const [communityAchievementRecipient, setCommunityAchievementRecipient] =
+  useState('');
+const [communityAchievementDescription, setCommunityAchievementDescription] =
+  useState('');
+const [communityAchievementDate, setCommunityAchievementDate] =
+  useState('');
+const [communityAchievementPhotoUrl, setCommunityAchievementPhotoUrl] =
+  useState('');
+const [communityAchievementPhotoFile, setCommunityAchievementPhotoFile] =
+  useState<File | null>(null);
+const [communityAchievementPhotoPreview, setCommunityAchievementPhotoPreview] =
+  useState('');
+const [isCommunityGroupModalOpen, setIsCommunityGroupModalOpen] =
+  useState(false);
+const [editingCommunityGroup, setEditingCommunityGroup] =
+  useState<CommunityGroup | null>(null);
+const [isSavingCommunityGroup, setIsSavingCommunityGroup] =
+  useState(false);
+
+const [communityGroupName, setCommunityGroupName] = useState('');
+const [communityGroupCategory, setCommunityGroupCategory] =
+  useState<CommunityGroupCategory>('atlet');
+const [communityGroupDescription, setCommunityGroupDescription] =
+  useState('');
+const [communityGroupActivityInfo, setCommunityGroupActivityInfo] =
+  useState('');
+const [communityGroupSchedule, setCommunityGroupSchedule] =
+  useState('');
+const [communityGroupWhatsappUrl, setCommunityGroupWhatsappUrl] =
+  useState('');
+const [communityGroupPhotoUrl, setCommunityGroupPhotoUrl] =
+  useState('');
+const [communityGroupPhotoFile, setCommunityGroupPhotoFile] =
+  useState<File | null>(null);
+const [communityGroupPhotoPreview, setCommunityGroupPhotoPreview] =
+  useState('');
 const [isLoadingOrganizationMembers, setIsLoadingOrganizationMembers] =
   useState(false);
 const [organizationMemberError, setOrganizationMemberError] =
@@ -249,7 +308,55 @@ const handleSaveOrganizationMember = async (
     unsubscribe();
   };
 }, []);
+const loadCommunityData = async () => {
+  try {
+    setIsLoadingCommunity(true);
+    setCommunityError(null);
+
+    const [groups, achievements] = await Promise.all([
+      DataService.fetchCommunityGroups(),
+      DataService.fetchCommunityAchievements(),
+    ]);
+
+    setCommunityGroups(groups);
+    setCommunityAchievements(achievements);
+  } catch (err) {
+    console.error(
+      '[AdminView] Gagal memuat data komunitas:',
+      err
+    );
+
+    setCommunityError(
+      err instanceof Error
+        ? err.message
+        : 'Gagal memuat data komunitas.'
+    );
+  } finally {
+    setIsLoadingCommunity(false);
+  }
+};
+
+useEffect(() => {
+  loadCommunityData();
+}, []);
+const openCommunityGroupModal = (
+  group: CommunityGroup | null = null
+) => {
+  setEditingCommunityGroup(group);
+  setCommunityGroupName(group?.name ?? '');
+  setCommunityGroupCategory(group?.category ?? 'atlet');
+  setCommunityGroupDescription(group?.description ?? '');
+  setCommunityGroupActivityInfo(group?.activityInfo ?? '');
+  setCommunityGroupSchedule(group?.schedule ?? '');
+  setCommunityGroupWhatsappUrl(group?.whatsappGroupUrl ?? '');
+  setCommunityGroupPhotoUrl(group?.photoUrl ?? '');
+  setCommunityGroupPhotoFile(null);
+  setCommunityGroupPhotoPreview(group?.photoUrl ?? '');
+  setIsCommunityGroupModalOpen(true);
+};
   const openOrganizationMemberModal = (
+    
+  
   member: OrganizationMember | null = null
 ) => {
   setEditingOrganizationMember(member);
@@ -374,6 +481,7 @@ const handleSaveOrganizationMember = async (
     setIsSavingOrganizationMember(false);
   }
 };
+
   const d1SchemaSql = DataService.generateD1SchemaSql();
   const workerCode = DataService.generateCloudflareWorkerExample();
 
@@ -495,7 +603,289 @@ const handleSaveHousehold = async (e: React.FormEvent) => {
     setIsSavingHousehold(false);
   }
 };
+const handleSaveCommunityGroup = async (
+  e: React.FormEvent
+) => {
+  e.preventDefault();
 
+  if (!communityGroupName.trim()) {
+    setCommunityError('Nama komunitas wajib diisi.');
+    return;
+  }
+
+  try {
+    setIsSavingCommunityGroup(true);
+    setCommunityError(null);
+
+    const basePayload = {
+      name: communityGroupName.trim(),
+      category: communityGroupCategory,
+      description: communityGroupDescription.trim() || null,
+      activityInfo: communityGroupActivityInfo.trim() || null,
+      schedule: communityGroupSchedule.trim() || null,
+      whatsappGroupUrl: communityGroupWhatsappUrl.trim() || null,
+      photoUrl: communityGroupPhotoUrl || null,
+      displayOrder:
+        editingCommunityGroup?.displayOrder ??
+        communityGroups.length,
+      isActive: editingCommunityGroup?.isActive ?? true,
+    };
+
+    if (editingCommunityGroup) {
+      let photoUrl = basePayload.photoUrl;
+
+      if (communityGroupPhotoFile) {
+        photoUrl = await DataService.uploadCommunityGroupPhoto(
+          editingCommunityGroup.id,
+          communityGroupCategory,
+          communityGroupPhotoFile
+        );
+      }
+
+      await DataService.updateCommunityGroup(
+        editingCommunityGroup.id,
+        {
+          ...basePayload,
+          photoUrl,
+        }
+      );
+    } else {
+      const createdGroup = await DataService.addCommunityGroup(
+        basePayload
+      );
+
+      if (communityGroupPhotoFile) {
+        const photoUrl =
+          await DataService.uploadCommunityGroupPhoto(
+            createdGroup.id,
+            communityGroupCategory,
+            communityGroupPhotoFile
+          );
+
+        await DataService.updateCommunityGroup(
+          createdGroup.id,
+          { photoUrl }
+        );
+      }
+    }
+
+    await loadCommunityData();
+    setIsCommunityGroupModalOpen(false);
+    setEditingCommunityGroup(null);
+  } catch (err) {
+    console.error(
+      '[AdminView] Gagal menyimpan komunitas:',
+      err
+    );
+
+    setCommunityError(
+      err instanceof Error
+        ? err.message
+        : 'Gagal menyimpan data komunitas.'
+    );
+  } finally {
+    setIsSavingCommunityGroup(false);
+  }
+};
+const handleDeleteCommunityGroup = async (
+  group: CommunityGroup
+) => {
+  const confirmed = window.confirm(
+    `Hapus komunitas "${group.name}"?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setCommunityError(null);
+
+    await DataService.deleteCommunityGroup(group.id);
+    await loadCommunityData();
+  } catch (err) {
+    console.error(
+      '[AdminView] Gagal menghapus komunitas:',
+      err
+    );
+
+    setCommunityError(
+      err instanceof Error
+        ? err.message
+        : 'Gagal menghapus komunitas.'
+    );
+  }
+};
+const openCommunityAchievementModal = (
+  achievement: CommunityAchievement | null = null
+) => {
+  setEditingCommunityAchievement(achievement);
+  setCommunityAchievementTitle(achievement?.title ?? '');
+  setCommunityAchievementRecipient(achievement?.recipient ?? '');
+  setCommunityAchievementDescription(
+    achievement?.description ?? ''
+  );
+  setCommunityAchievementDate(
+    achievement?.achievementDate ?? ''
+  );
+  setCommunityAchievementPhotoUrl(
+    achievement?.photoUrl ?? ''
+  );
+  setCommunityAchievementPhotoFile(null);
+  setCommunityAchievementPhotoPreview(
+    achievement?.photoUrl ?? ''
+  );
+  setIsCommunityAchievementModalOpen(true);
+};
+const handleCommunityGroupPhotoChange = (
+  e: React.ChangeEvent<HTMLInputElement>
+) => {
+  const file = e.target.files?.[0] ?? null;
+
+  setCommunityGroupPhotoFile(file);
+
+  if (file) {
+    setCommunityGroupPhotoPreview(URL.createObjectURL(file));
+  } else {
+    setCommunityGroupPhotoPreview(communityGroupPhotoUrl);
+  }
+};
+
+const handleCommunityAchievementPhotoChange = (
+  e: React.ChangeEvent<HTMLInputElement>
+) => {
+  const file = e.target.files?.[0] ?? null;
+
+  setCommunityAchievementPhotoFile(file);
+
+  if (file) {
+    setCommunityAchievementPhotoPreview(
+      URL.createObjectURL(file)
+    );
+  } else {
+    setCommunityAchievementPhotoPreview(
+      communityAchievementPhotoUrl
+    );
+  }
+};
+const handleSaveCommunityAchievement = async (
+  e: React.FormEvent
+) => {
+  e.preventDefault();
+
+  if (!communityAchievementTitle.trim()) {
+    setCommunityError('Judul prestasi wajib diisi.');
+    return;
+  }
+
+  if (!communityAchievementRecipient.trim()) {
+    setCommunityError('Nama penerima prestasi wajib diisi.');
+    return;
+  }
+
+  try {
+    setIsSavingCommunityAchievement(true);
+    setCommunityError(null);
+
+    const basePayload = {
+      title: communityAchievementTitle.trim(),
+      recipient: communityAchievementRecipient.trim(),
+      description:
+        communityAchievementDescription.trim() || null,
+      achievementDate:
+        communityAchievementDate || null,
+      photoUrl: communityAchievementPhotoUrl || null,
+      displayOrder:
+        editingCommunityAchievement?.displayOrder ??
+        communityAchievements.length,
+      isActive:
+        editingCommunityAchievement?.isActive ?? true,
+    };
+
+    if (editingCommunityAchievement) {
+      let photoUrl = basePayload.photoUrl;
+
+      if (communityAchievementPhotoFile) {
+        photoUrl =
+          await DataService.uploadCommunityAchievementPhoto(
+            editingCommunityAchievement.id,
+            communityAchievementPhotoFile
+          );
+      }
+
+      await DataService.updateCommunityAchievement(
+        editingCommunityAchievement.id,
+        {
+          ...basePayload,
+          photoUrl,
+        }
+      );
+    } else {
+      const createdAchievement =
+        await DataService.addCommunityAchievement(
+          basePayload
+        );
+
+      if (communityAchievementPhotoFile) {
+        const photoUrl =
+          await DataService.uploadCommunityAchievementPhoto(
+            createdAchievement.id,
+            communityAchievementPhotoFile
+          );
+
+        await DataService.updateCommunityAchievement(
+          createdAchievement.id,
+          { photoUrl }
+        );
+      }
+    }
+
+    await loadCommunityData();
+    setIsCommunityAchievementModalOpen(false);
+    setEditingCommunityAchievement(null);
+  } catch (err) {
+    console.error(
+      '[AdminView] Gagal menyimpan prestasi:',
+      err
+    );
+
+    setCommunityError(
+      err instanceof Error
+        ? err.message
+        : 'Gagal menyimpan data prestasi.'
+    );
+  } finally {
+    setIsSavingCommunityAchievement(false);
+  }
+};
+const handleDeleteCommunityAchievement = async (
+  achievement: CommunityAchievement
+) => {
+  const confirmed = window.confirm(
+    `Hapus prestasi "${achievement.title}"?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setCommunityError(null);
+
+    await DataService.deleteCommunityAchievement(
+      achievement.id
+    );
+
+    await loadCommunityData();
+  } catch (err) {
+    console.error(
+      '[AdminView] Gagal menghapus prestasi:',
+      err
+    );
+
+    setCommunityError(
+      err instanceof Error
+        ? err.message
+        : 'Gagal menghapus prestasi.'
+    );
+  }
+};
 const handleDeactivateHousehold = async (household: Household) => {
   const confirmed = window.confirm(
     `Nonaktifkan data ${household.houseNumber} - ${household.residentName}?\n\n` +
@@ -694,11 +1084,12 @@ const kosongCount = activeHouseholds.filter(
         </button>
 
         <button
-          onClick={() => onSelectTab('proker')}
+          onClick={() => onSelectTab('komunitas')}
           className="p-3.5 bg-white rounded-xl border border-slate-200 hover:border-emerald-500/40 text-left space-y-1 shadow-2xs transition-colors"
         >
           <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-          <span className="block text-xs font-bold text-slate-800">Program Kerja</span>
+          <span className="block text-xs font-bold text-slate-800">Komunitas
+          </span>
           <span className="text-[11px] text-slate-500 block">Atur progres & anggaran</span>
         </button>
       </div>
@@ -716,18 +1107,7 @@ const kosongCount = activeHouseholds.filter(
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Aspirasi & Lapor Warga ({reports.length})</span>
                 </button>
-              <button
-          onClick={() => setAdminTab('pengurus')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
-            adminTab === 'pengurus'
-              ? 'bg-emerald-800 text-white'
-              : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>Pengurus</span>
-        </button>
-      </div>
+                </div>
 
       {/* Tab 1: Aspirasi & Laporan Warga */}
       {adminTab === 'laporan' && (
@@ -817,6 +1197,17 @@ const kosongCount = activeHouseholds.filter(
 >
   <Users className="w-3.5 h-3.5" />
   <span>Pengurus ({organizationMembers.length})</span>
+</button>
+<button
+  onClick={() => setAdminTab('komunitas')}
+  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
+    adminTab === 'komunitas'
+      ? 'bg-emerald-800 text-white'
+      : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
+  }`}
+>
+  <Users className="w-3.5 h-3.5" />
+  <span>Komunitas ({communityGroups.length + communityAchievements.length})</span>
 </button>
 {adminTab === 'pengurus' && (
   <div className="space-y-4">
@@ -1404,7 +1795,590 @@ const kosongCount = activeHouseholds.filter(
     </div>
   </div>
 )}
+      {adminTab === 'komunitas' && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Komunitas Blok H
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Kelola komunitas Atlet, Gamers, dan Galeri Prestasi Blok H.
+              </p>
+            </div>
+          </div>
 
+          {/* Error */}
+          {communityError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+              {communityError}
+            </div>
+          )}
+
+          {/* Loading */}
+          {isLoadingCommunity ? (
+            <div className="rounded-xl border border-slate-200 bg-white p-10 text-center">
+              <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-700" />
+              <p className="mt-3 text-xs text-slate-500">
+                Memuat data komunitas...
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Komunitas */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">
+                      Atlet & Gamers
+                    </h4>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Tambah, edit, atau hapus komunitas warga Blok H.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => openCommunityGroupModal()}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-900"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Tambah Komunitas
+                  </button>
+                </div>
+
+                {communityGroups.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
+                    <p className="text-xs text-slate-500">
+                      Belum ada komunitas Atlet atau Gamers.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {communityGroups.map((group) => (
+                      <div
+                        key={group.id}
+                        className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          {group.photoUrl ? (
+                            <img
+                              src={group.photoUrl}
+                              alt={group.name}
+                              className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                              <Users className="h-7 w-7" />
+                            </div>
+                          )}
+
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h5 className="truncate text-sm font-bold text-slate-900">
+                                {group.name}
+                              </h5>
+
+                              <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                                {group.category === 'atlet'
+                                  ? 'Atlet'
+                                  : 'Gamers'}
+                              </span>
+                            </div>
+
+                            {group.description && (
+                              <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                                {group.description}
+                              </p>
+                            )}
+
+                            {group.schedule && (
+                              <p className="mt-1 text-[11px] text-slate-500">
+                                Jadwal: {group.schedule}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openCommunityGroupModal(group)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCommunityGroup(group)
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Hapus
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Galeri Prestasi */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">
+                      Galeri Prestasi
+                    </h4>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Kelola dokumentasi prestasi warga dan komunitas Blok H.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => openCommunityAchievementModal()}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-900"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Tambah Prestasi
+                  </button>
+                </div>
+
+                {communityAchievements.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
+                    <p className="text-xs text-slate-500">
+                      Belum ada data prestasi.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {communityAchievements.map((achievement) => (
+                      <div
+                        key={achievement.id}
+                        className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          {achievement.photoUrl ? (
+                            <img
+                              src={achievement.photoUrl}
+                              alt={achievement.title}
+                              className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                              <span className="text-xl">🏆</span>
+                            </div>
+                          )}
+
+                          <div className="min-w-0">
+                            <h5 className="text-sm font-bold text-slate-900">
+                              {achievement.title}
+                            </h5>
+
+                            <p className="mt-1 text-xs font-medium text-slate-600">
+                              {achievement.recipient}
+                            </p>
+
+                            {achievement.description && (
+                              <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                                {achievement.description}
+                              </p>
+                            )}
+
+                            {achievement.achievementDate && (
+                              <p className="mt-1 text-[11px] text-slate-500">
+                                Tanggal: {achievement.achievementDate}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openCommunityAchievementModal(
+                                achievement
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCommunityAchievement(
+                                achievement
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Hapus
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+            {/* Modal Tambah / Edit Komunitas */}
+      {isCommunityGroupModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingCommunityGroup
+                    ? 'Edit Komunitas'
+                    : 'Tambah Komunitas'}
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Data komunitas Atlet atau Gamers Blok H.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCommunityGroupModalOpen(false);
+                  setEditingCommunityGroup(null);
+                  setCommunityError(null);
+                }}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                title="Tutup"
+              >
+                <span className="text-xl leading-none">×</span>
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleSaveCommunityGroup}
+              className="overflow-y-auto"
+            >
+              <div className="space-y-4 px-5 py-5 sm:px-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                      Nama Komunitas
+                    </label>
+                    <input
+                      type="text"
+                      value={communityGroupName}
+                      onChange={(e) =>
+                        setCommunityGroupName(e.target.value)
+                      }
+                      placeholder="Contoh: Blok H Futsal"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                      Kategori
+                    </label>
+                    <select
+                      value={communityGroupCategory}
+                      onChange={(e) =>
+                        setCommunityGroupCategory(
+                          e.target.value as CommunityGroupCategory
+                        )
+                      }
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                    >
+                      <option value="atlet">Atlet</option>
+                      <option value="gamers">Gamers</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Deskripsi
+                  </label>
+                  <textarea
+                    value={communityGroupDescription}
+                    onChange={(e) =>
+                      setCommunityGroupDescription(e.target.value)
+                    }
+                    rows={3}
+                    placeholder="Jelaskan komunitas dan anggotanya..."
+                    className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Informasi Kegiatan
+                  </label>
+                  <textarea
+                    value={communityGroupActivityInfo}
+                    onChange={(e) =>
+                      setCommunityGroupActivityInfo(e.target.value)
+                    }
+                    rows={3}
+                    placeholder="Contoh: Latihan rutin, sparing, turnamen..."
+                    className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                      Jadwal Kegiatan
+                    </label>
+                    <input
+                      type="text"
+                      value={communityGroupSchedule}
+                      onChange={(e) =>
+                        setCommunityGroupSchedule(e.target.value)
+                      }
+                      placeholder="Contoh: Minggu, 16.00 WIB"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                      Link Grup WhatsApp
+                    </label>
+                    <input
+                      type="url"
+                      value={communityGroupWhatsappUrl}
+                      onChange={(e) =>
+                        setCommunityGroupWhatsappUrl(e.target.value)
+                      }
+                      placeholder="https://chat.whatsapp.com/..."
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Foto Komunitas
+                  </label>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCommunityGroupPhotoChange}
+                    className="block w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700"
+                  />
+
+                  {communityGroupPhotoPreview && (
+                    <div className="mt-3">
+                      <img
+                        src={communityGroupPhotoPreview}
+                        alt="Preview foto komunitas"
+                        className="h-40 w-full rounded-xl object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:px-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCommunityGroupModalOpen(false);
+                    setEditingCommunityGroup(null);
+                    setCommunityError(null);
+                  }}
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSavingCommunityGroup}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSavingCommunityGroup && (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  )}
+                  {editingCommunityGroup
+                    ? 'Simpan Perubahan'
+                    : 'Simpan Komunitas'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tambah / Edit Prestasi */}
+      {isCommunityAchievementModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingCommunityAchievement
+                    ? 'Edit Prestasi'
+                    : 'Tambah Prestasi'}
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Data prestasi warga atau komunitas Blok H.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCommunityAchievementModalOpen(false);
+                  setEditingCommunityAchievement(null);
+                  setCommunityError(null);
+                }}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                title="Tutup"
+              >
+                <span className="text-xl leading-none">×</span>
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleSaveCommunityAchievement}
+              className="overflow-y-auto"
+            >
+              <div className="space-y-4 px-5 py-5 sm:px-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                      Judul Prestasi
+                    </label>
+                    <input
+                      type="text"
+                      value={communityAchievementTitle}
+                      onChange={(e) =>
+                        setCommunityAchievementTitle(e.target.value)
+                      }
+                      placeholder="Contoh: Juara 1 Turnamen Futsal"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                      Penerima / Peraih
+                    </label>
+                    <input
+                      type="text"
+                      value={communityAchievementRecipient}
+                      onChange={(e) =>
+                        setCommunityAchievementRecipient(
+                          e.target.value
+                        )
+                      }
+                      placeholder="Nama warga / komunitas"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Deskripsi Prestasi
+                  </label>
+                  <textarea
+                    value={communityAchievementDescription}
+                    onChange={(e) =>
+                      setCommunityAchievementDescription(
+                        e.target.value
+                      )
+                    }
+                    rows={4}
+                    placeholder="Ceritakan pencapaian atau kegiatan..."
+                    className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Tanggal Prestasi
+                  </label>
+                  <input
+                    type="date"
+                    value={communityAchievementDate}
+                    onChange={(e) =>
+                      setCommunityAchievementDate(e.target.value)
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Foto Prestasi
+                  </label>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCommunityAchievementPhotoChange}
+                    className="block w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700"
+                  />
+
+                  {communityAchievementPhotoPreview && (
+                    <div className="mt-3">
+                      <img
+                        src={communityAchievementPhotoPreview}
+                        alt="Preview foto prestasi"
+                        className="h-40 w-full rounded-xl object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:px-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCommunityAchievementModalOpen(false);
+                    setEditingCommunityAchievement(null);
+                    setCommunityError(null);
+                  }}
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSavingCommunityAchievement}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSavingCommunityAchievement && (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  )}
+                  {editingCommunityAchievement
+                    ? 'Simpan Perubahan'
+                    : 'Simpan Prestasi'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       {/* Modal Tambah / Edit Pengurus */}
       {isOrganizationMemberModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">

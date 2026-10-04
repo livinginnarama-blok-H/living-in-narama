@@ -21,7 +21,7 @@ export type TabKey =
   | 'beranda'
   | 'pengumuman'
   | 'agenda'
-  | 'proker'
+  | 'komunitas'
   | 'keuangan'
   | 'dokumentasi'
   | 'pengurus'
@@ -148,38 +148,93 @@ export type AgendaItem = EventAgenda;
  * ==========================================================
  */
 
-export interface Program {
+
+
+
+/**
+ * ==========================================================
+ * 5. KOMUNITAS BLOK H
+ * ==========================================================
+ */
+
+export type CommunityGroupCategory = 'atlet' | 'gamers';
+
+export interface CommunityGroup {
   id: string;
-  title: string;
 
-  term:
-    | 'pendek'
-    | 'menengah'
-    | 'panjang';
+  /**
+   * Nama komunitas / kelompok.
+   * Contoh: Tim Futsal Blok H
+   */
+  name: string;
 
-  period: string;
+  category: CommunityGroupCategory;
 
-  description: string;
-  pic: string;
+  description?: string | null;
 
-  budgetEstimated: number;
-  budgetRealized: number;
+  /**
+   * URL foto komunitas / anggota.
+   */
+  photoUrl?: string | null;
 
-  progress: number;
+  /**
+   * Informasi kegiatan komunitas.
+   */
+  activityInfo?: string | null;
 
-  status:
-    | 'rencana'
-    | 'berjalan'
-    | 'selesai'
-    | 'evaluasi';
+  /**
+   * Jadwal latihan, mabar, event, dll.
+   */
+  schedule?: string | null;
 
-  targets: string[];
+  /**
+   * Link langsung grup WhatsApp.
+   */
+  whatsappGroupUrl?: string | null;
 
-  createdAt?: string;
-  updatedAt?: string;
+  displayOrder: number;
+
+  isActive: boolean;
+
+  createdAt: string;
+
+  updatedAt: string;
 }
 
-export type WorkProgram = Program;
+export interface CommunityAchievement {
+  id: string;
+
+  /**
+   * Judul prestasi.
+   * Contoh: Juara 1 Turnamen Futsal Antar Blok
+   */
+  title: string;
+
+  /**
+   * Nama individu / tim yang memperoleh prestasi.
+   */
+  recipient: string;
+
+  description?: string | null;
+
+  /**
+   * Tanggal prestasi.
+   */
+  achievementDate?: string | null;
+
+  /**
+   * Foto dokumentasi prestasi.
+   */
+  photoUrl?: string | null;
+
+  displayOrder: number;
+
+  isActive: boolean;
+
+  createdAt: string;
+
+  updatedAt: string;
+}
 
 /**
  * ==========================================================
