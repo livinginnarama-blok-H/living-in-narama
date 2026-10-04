@@ -342,7 +342,17 @@ export interface IPortalDataRepository {
 
   // Organization / Pengurus
   fetchOrganizationMembers(): Promise<OrganizationMember[]>;
+  
+  addOrganizationMember(
+  item: Omit<OrganizationMember, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<OrganizationMember>;
 
+updateOrganizationMember(
+  id: string,
+  item: Partial<Omit<OrganizationMember, 'id' | 'createdAt' | 'updatedAt'>>
+): Promise<OrganizationMember>;
+
+deleteOrganizationMember(id: string): Promise<void>;
   // Programs
   getWorkPrograms(): Program[];
   fetchWorkPrograms(): Promise<Program[]>;
@@ -600,7 +610,7 @@ export const DataService: IPortalDataRepository = {
         error.message || 'Gagal memuat data pengurus dari Supabase'
       );
     }
-
+    
     const members: OrganizationMember[] = (data || []).map((item) => ({
       id: item.id,
       name: item.name,
@@ -621,6 +631,185 @@ export const DataService: IPortalDataRepository = {
 
     return members;
   },
+  async addOrganizationMember(
+  item: Omit<OrganizationMember, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<OrganizationMember> {
+  const id = generateSafeId('org');
+
+  const payload = {
+    id,
+    name: item.name,
+    position: item.position,
+    division: item.division ?? null,
+    photo_url: item.photoUrl ?? null,
+    phone: item.phone ?? null,
+    bio: item.bio ?? null,
+    responsibilities: item.responsibilities ?? null,
+    parent_id: item.parentId ?? null,
+    display_order: item.displayOrder ?? 0,
+    is_active: item.isActive ?? true,
+    period_start: item.periodStart,
+    period_end: item.periodEnd,
+  };
+
+  const { data, error } = await supabase
+    .from('organization_members')
+    .insert(payload)
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error(
+      '[DataService] Supabase addOrganizationMember error:',
+      error
+    );
+
+    throw new Error(
+      error.message || 'Gagal menambahkan data pengurus'
+    );
+  }
+
+  const member: OrganizationMember = {
+    id: data.id,
+    name: data.name,
+    position: data.position,
+    division: data.division,
+    photoUrl: data.photo_url,
+    phone: data.phone,
+    bio: data.bio,
+    responsibilities: data.responsibilities,
+    parentId: data.parent_id,
+    displayOrder: data.display_order,
+    isActive: data.is_active,
+    periodStart: data.period_start,
+    periodEnd: data.period_end,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+
+  emitDataChange();
+
+  return member;
+},
+
+async updateOrganizationMember(
+  id: string,
+  item: Partial<Omit<OrganizationMember, 'id' | 'createdAt' | 'updatedAt'>>
+): Promise<OrganizationMember> {
+  const payload: Record<string, unknown> = {};
+
+  if (item.name !== undefined) {
+    payload.name = item.name;
+  }
+
+  if (item.position !== undefined) {
+    payload.position = item.position;
+  }
+
+  if (item.division !== undefined) {
+    payload.division = item.division;
+  }
+
+  if (item.photoUrl !== undefined) {
+    payload.photo_url = item.photoUrl;
+  }
+
+  if (item.phone !== undefined) {
+    payload.phone = item.phone;
+  }
+
+  if (item.bio !== undefined) {
+    payload.bio = item.bio;
+  }
+
+  if (item.responsibilities !== undefined) {
+    payload.responsibilities = item.responsibilities;
+  }
+
+  if (item.parentId !== undefined) {
+    payload.parent_id = item.parentId;
+  }
+
+  if (item.displayOrder !== undefined) {
+    payload.display_order = item.displayOrder;
+  }
+
+  if (item.isActive !== undefined) {
+    payload.is_active = item.isActive;
+  }
+
+  if (item.periodStart !== undefined) {
+    payload.period_start = item.periodStart;
+  }
+
+  if (item.periodEnd !== undefined) {
+    payload.period_end = item.periodEnd;
+  }
+
+  payload.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('organization_members')
+    .update(payload)
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error(
+      '[DataService] Supabase updateOrganizationMember error:',
+      error
+    );
+
+    throw new Error(
+      error.message || 'Gagal memperbarui data pengurus'
+    );
+  }
+
+  const member: OrganizationMember = {
+    id: data.id,
+    name: data.name,
+    position: data.position,
+    division: data.division,
+    photoUrl: data.photo_url,
+    phone: data.phone,
+    bio: data.bio,
+    responsibilities: data.responsibilities,
+    parentId: data.parent_id,
+    displayOrder: data.display_order,
+    isActive: data.is_active,
+    periodStart: data.period_start,
+    periodEnd: data.period_end,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+
+  emitDataChange();
+
+  return member;
+},
+
+async deleteOrganizationMember(
+  id: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('organization_members')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error(
+      '[DataService] Supabase deleteOrganizationMember error:',
+      error
+    );
+
+    throw new Error(
+      error.message || 'Gagal menghapus data pengurus'
+    );
+  }
+
+  emitDataChange();
+},
   async addAgenda(
     item: Omit<EventAgenda, 'id' | 'createdAt'>
   ): Promise<EventAgenda> {
