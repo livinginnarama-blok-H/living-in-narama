@@ -62,9 +62,7 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
   );
 
   // Financial transactions & summary metrics from DataService (Single Source of Truth)
-  const [transactions, setTransactions] = useState<FinanceTransaction[]>(() =>
-  DataService.getTransactions(true)
-);
+  const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
 
 useEffect(() => {
   let cancelled = false;
@@ -616,21 +614,43 @@ useEffect(() => {
           </p>
         </div>
 
-        {/* Card 4: Kepatuhan IPL Dinamis */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-500 block">Kepatuhan Iuran (IPL)</span>
-            <span className="text-xs font-bold text-emerald-700">{metrics.complianceRate}%</span>
-          </div>
-          <p className="text-xl font-bold text-slate-900 tabular-nums">
-            {metrics.paidHouseholds} / {metrics.activeHouseholds} <span className="text-xs font-normal text-slate-500">Unit Lunas</span>
-          </p>
-          <div className="text-[11px] text-slate-500 flex justify-between pt-0.5">
-            <span>Terkumpul: <strong className="text-emerald-700 font-semibold">{formatCurrency(metrics.monthlyIPLCollected)}</strong></span>
-            <span>Tunggakan: <strong className="text-amber-700 font-semibold">{formatCurrency(metrics.monthlyIPLOutstanding)}</strong></span>
-          </div>
-        </div>
+        {/* Card 4: Kepatuhan IPL Dinamis - Admin Only */}
+        {isAdmin && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-slate-500 block">
+                Kepatuhan Iuran (IPL)
+              </span>
+              <span className="text-xs font-bold text-emerald-700">
+                {metrics.complianceRate}%
+              </span>
+            </div>
+
+            <p className="text-xl font-bold text-slate-900 tabular-nums">
+              {metrics.paidHouseholds} / {metrics.activeHouseholds}
+              <span className="text-xs font-normal text-slate-500">
+                {" "}Unit Lunas
+              </span>
+            </p>
+
+            <div className="text-[11px] text-slate-500 flex justify-between pt-0.5">
+              <span>
+                Terkumpul:
+                <strong className="text-emerald-700 font-semibold">
+                  {formatCurrency(metrics.monthlyIPLCollected)}
+                </strong>
+              </span>
+              <span>
+                Tunggakan:
+                <strong className="text-amber-700 font-semibold">
+                  {formatCurrency(metrics.monthlyIPLOutstanding)}
+                </strong>
+              </span>
+            </div>
+           </div>
+        )}
       </div>
+
 
       {/* Info Rekening Pembayaran Iuran Warga */}
       <div className="bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white rounded-2xl border border-emerald-200 p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
@@ -681,17 +701,19 @@ useEffect(() => {
           <span>Buku Kas & Transaksi Kas ({filteredTransactions.length})</span>
         </button>
 
-        <button
-          onClick={() => setActiveSubTab('rekap_ipl')}
-          className={`pb-3 px-3 text-xs font-bold flex items-center gap-2 transition-colors border-b-2 ${
-            activeSubTab === 'rekap_ipl'
-              ? 'border-emerald-700 text-emerald-900'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Rekapitulasi Iuran (IPL) Warga ({households.length} Unit)</span>
-        </button>
+        {isAdmin && (
+   <button
+    onClick={() => setActiveSubTab('rekap_ipl')}
+    className={`pb-3 px-3 text-xs font-bold flex items-center gap-2 transition-colors border-b-2 ${
+      activeSubTab === 'rekap_ipl'
+        ? 'border-emerald-700 text-emerald-900'
+        : 'border-transparent text-slate-500 hover:text-slate-800'
+    }`}
+  >
+    <Users className="w-4 h-4" />
+    <span>Rekapitulasi Iuran (IPL) Warga ({households.length} Unit)</span>
+  </button>
+)}
       </div>
 
       {/* TAB 1: BUKU KAS & TRANSAKSI */}
@@ -901,7 +923,7 @@ useEffect(() => {
       )}
 
       {/* TAB 2: REKAPITULASI IURAN (IPL) WARGA */}
-      {activeSubTab === 'rekap_ipl' && (
+      {isAdmin && activeSubTab === 'rekap_ipl' && (
         <div className="space-y-4">
           {/* IPL Sub-header & Filter */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
