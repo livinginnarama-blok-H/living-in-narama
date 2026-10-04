@@ -37,7 +37,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
             </div>
             <div>
               <span className="text-base sm:text-lg font-bold tracking-tight text-slate-900 group-hover:text-emerald-900 transition-colors">
-                Griya Adika Narama
+                Living In Narama
               </span>
               <span className="hidden sm:inline text-xs text-emerald-700 font-medium ml-2">
                 Blok H
