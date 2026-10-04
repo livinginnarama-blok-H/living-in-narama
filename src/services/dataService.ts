@@ -342,6 +342,11 @@ export interface IPortalDataRepository {
 
   // Organization / Pengurus
   fetchOrganizationMembers(): Promise<OrganizationMember[]>;
+
+uploadOrganizationMemberPhoto(
+  memberId: string,
+  imageFile: File
+): Promise<string>;
   
   addOrganizationMember(
   item: Omit<OrganizationMember, 'id' | 'createdAt' | 'updatedAt'>
@@ -631,6 +636,39 @@ export const DataService: IPortalDataRepository = {
 
     return members;
   },
+  async uploadOrganizationMemberPhoto(
+  memberId: string,
+  imageFile: File
+): Promise<string> {
+  const extension =
+    imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+
+  const filePath = `${memberId}-${Date.now()}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('organization-members')
+    .upload(filePath, imageFile, {
+      cacheControl: '3600',
+      upsert: false,
+    });
+
+  if (uploadError) {
+    console.error(
+      '[DataService] Supabase uploadOrganizationMemberPhoto error:',
+      uploadError
+    );
+
+    throw new Error(
+      uploadError.message || 'Gagal mengunggah foto pengurus'
+    );
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from('organization-members')
+    .getPublicUrl(filePath);
+
+  return publicUrlData.publicUrl;
+},
   async addOrganizationMember(
   item: Omit<OrganizationMember, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<OrganizationMember> {

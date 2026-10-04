@@ -96,6 +96,10 @@ const [organizationMemberPhone, setOrganizationMemberPhone] =
   useState('');
 const [organizationMemberPhotoUrl, setOrganizationMemberPhotoUrl] =
   useState('');
+  const [organizationMemberPhotoFile, setOrganizationMemberPhotoFile] =
+  useState<File | null>(null);
+const [organizationMemberPhotoPreview, setOrganizationMemberPhotoPreview] =
+  useState('');
 const [organizationMemberBio, setOrganizationMemberBio] = useState('');
 const [organizationMemberResponsibilities, setOrganizationMemberResponsibilities] =
   useState('');
@@ -254,6 +258,8 @@ const handleSaveOrganizationMember = async (
   setOrganizationMemberDivision(member?.division ?? '');
   setOrganizationMemberPhone(member?.phone ?? '');
   setOrganizationMemberPhotoUrl(member?.photoUrl ?? '');
+  setOrganizationMemberPhotoFile(null);
+  setOrganizationMemberPhotoPreview(member?.photoUrl ?? '');
   setOrganizationMemberBio(member?.bio ?? '');
   setOrganizationMemberResponsibilities(
     member?.responsibilities ?? ''
@@ -291,12 +297,12 @@ const handleSaveOrganizationMember = async (
     setIsSavingOrganizationMember(true);
     setOrganizationMemberError('');
 
-    const payload = {
+    const basePayload = {
       name: organizationMemberName.trim(),
       position: organizationMemberPosition.trim(),
       division: organizationMemberDivision.trim() || null,
       phone: organizationMemberPhone.trim() || null,
-      photoUrl: organizationMemberPhotoUrl.trim() || null,
+      photoUrl: editingOrganizationMember?.photoUrl ?? null,
       bio: organizationMemberBio.trim() || null,
       responsibilities:
         organizationMemberResponsibilities.trim() || null,
@@ -309,16 +315,50 @@ const handleSaveOrganizationMember = async (
     };
 
     if (editingOrganizationMember) {
+      let photoUrl = editingOrganizationMember.photoUrl ?? null;
+
+      if (organizationMemberPhotoFile) {
+        photoUrl = await DataService.uploadOrganizationMemberPhoto(
+          editingOrganizationMember.id,
+          organizationMemberPhotoFile
+        );
+      }
+
       await DataService.updateOrganizationMember(
         editingOrganizationMember.id,
-        payload
+        {
+          ...basePayload,
+          photoUrl,
+        }
       );
     } else {
-      await DataService.addOrganizationMember(payload);
+      const createdMember =
+        await DataService.addOrganizationMember(basePayload);
+
+      if (organizationMemberPhotoFile) {
+        const photoUrl =
+          await DataService.uploadOrganizationMemberPhoto(
+            createdMember.id,
+            organizationMemberPhotoFile
+          );
+
+        await DataService.updateOrganizationMember(
+          createdMember.id,
+          {
+            photoUrl,
+          }
+        );
+      }
     }
+
+    setOrganizationMemberPhotoFile(null);
+    setOrganizationMemberPhotoPreview('');
 
     setIsOrganizationMemberModalOpen(false);
     setEditingOrganizationMember(null);
+
+    const data = await DataService.fetchOrganizationMembers();
+    setOrganizationMembers(data);
   } catch (err) {
     console.error(
       '[AdminView] Gagal menyimpan data pengurus:',
@@ -1478,21 +1518,65 @@ const kosongCount = activeHouseholds.filter(
                   </div>
 
                   {/* Foto URL */}
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-700">
-                      URL Foto
-                    </label>
+                  <div className="space-y-3">
+  <div>
+    <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+      Foto Pengurus
+    </label>
 
-                    <input
-                      type="url"
-                      value={organizationMemberPhotoUrl}
-                      onChange={(e) =>
-                        setOrganizationMemberPhotoUrl(e.target.value)
-                      }
-                      placeholder="https://..."
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-700"
-                    />
-                  </div>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) => {
+        const file = e.target.files?.[0] ?? null;
+
+        setOrganizationMemberPhotoFile(file);
+
+        if (file) {
+          const previewUrl = URL.createObjectURL(file);
+          setOrganizationMemberPhotoPreview(previewUrl);
+        } else {
+          setOrganizationMemberPhotoPreview(
+            editingOrganizationMember?.photoUrl ?? ''
+          );
+        }
+      }}
+      className="block w-full cursor-pointer rounded-lg border border-slate-200 bg-white text-xs text-slate-600 file:mr-3 file:cursor-pointer file:border-0 file:bg-emerald-50 file:px-4 file:py-2.5 file:text-xs file:font-semibold file:text-emerald-700 hover:file:bg-emerald-100"
+    />
+
+    <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
+      Pilih foto dari komputer. Format gambar JPG, PNG, atau WebP.
+    </p>
+  </div>
+
+  {organizationMemberPhotoPreview && (
+    <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-white bg-emerald-50 shadow-sm">
+        <img
+          src={organizationMemberPhotoPreview}
+          alt="Preview foto pengurus"
+          className="h-full w-full object-cover"
+        />
+      </div>
+
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-slate-700">
+          Preview Foto
+        </p>
+
+        {organizationMemberPhotoFile ? (
+          <p className="mt-1 truncate text-[11px] text-slate-500">
+            {organizationMemberPhotoFile.name}
+          </p>
+        ) : (
+          <p className="mt-1 text-[11px] text-slate-400">
+            Foto saat ini
+          </p>
+        )}
+      </div>
+    </div>
+  )}
+</div>
 
                   {/* Tanggung Jawab */}
                   <div className="sm:col-span-2">
