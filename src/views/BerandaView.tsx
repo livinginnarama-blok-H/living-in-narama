@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TabKey, Announcement, EventAgenda, RondaSchedule } from '../types/portal';
+import { TabKey, Announcement, EventAgenda, RondaSchedule, Household } from '../types/portal';
 import { DataService } from '../services/dataService';
 import heroImage from '@/src/assets/images/hero_mountain_housing_1790351060957.jpg';
 import {
@@ -34,6 +34,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
   const [agendas, setAgendas] = useState<EventAgenda[]>(() => DataService.getAgendas());
   const [metrics, setMetrics] = useState(() => DataService.getFinancialMetrics());
   const [rondaSchedules, setRondaSchedules] = useState<RondaSchedule[]>([]);
+  const [households, setHouseholds] = useState<Household[]>(() => DataService.getHouseholds());
 
   // Centralized DataService Subscription
   useEffect(() => {
@@ -78,6 +79,16 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
     } catch (error) {
       console.error('[BerandaView] Gagal memuat transaksi keuangan:', error);
     }
+        // Load data rumah warga terbaru dari Supabase
+    try {
+      const fetchedHouseholds = await DataService.fetchHouseholds();
+
+      if (!cancelled) {
+        setHouseholds(fetchedHouseholds);
+      }
+    } catch (error) {
+      console.error('[BerandaView] Gagal memuat data rumah warga:', error);
+    }
   };
 
   loadData();
@@ -95,6 +106,19 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
     unsubscribe();
   };
 }, []);
+const activeHouseholds = households.filter((h) => h.isActive);
+
+const huniCount = activeHouseholds.filter(
+  (h) => h.occupancyStatus === 'huni'
+).length;
+
+const semiHuniCount = activeHouseholds.filter(
+  (h) => h.occupancyStatus === 'semi-huni'
+).length;
+
+const kosongCount = activeHouseholds.filter(
+  (h) => h.occupancyStatus === 'kosong'
+).length;
 
 // Find today's ronda team
 const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -202,8 +226,15 @@ const upcomingAgendas = agendas
           <div>
             <span className="block text-emerald-300 text-[11px] font-medium">Unit Hunian Warga</span>
             <span className="text-sm sm:text-base font-bold text-white">
-              {metrics.activeHouseholds > 0 ? `${metrics.activeHouseholds} Unit Terdata` : '[Menunggu Data Resmi]'}
+              {activeHouseholds.length > 0
+  ? `${activeHouseholds.length} Unit Terdata`
+  : '[Menunggu Data Resmi]'}
             </span>
+            {activeHouseholds.length > 0 && (
+  <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
+    {huniCount} Huni · {semiHuniCount} Semi Huni · {kosongCount} Kosong
+  </span>
+)}
           </div>
           <div>
             <span className="block text-emerald-300 text-[11px] font-medium">Keamanan Lingkungan</span>

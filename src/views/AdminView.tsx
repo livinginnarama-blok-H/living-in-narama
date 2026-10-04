@@ -455,20 +455,10 @@ const kosongCount = activeHouseholds.filter(
         >
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Aspirasi & Lapor Warga ({reports.length})</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('cloudflare')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
-            adminTab === 'cloudflare'
-              ? 'bg-emerald-800 text-white'
-              : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
-          }`}
-        >
-          </button>
-   
+                </button>
       </div>
-           {/* Tab 1: Aspirasi & Laporan Warga */}
+
+      {/* Tab 1: Aspirasi & Laporan Warga */}
       {adminTab === 'laporan' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
