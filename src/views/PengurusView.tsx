@@ -249,69 +249,77 @@ export default function PengurusView() {
    * parentId dan displayOrder tidak digunakan untuk layout.
    */
   const organization = useMemo(() => {
-    const normalize = (value: string) => {
-      return value
-        .toLowerCase()
-        .replace(/&/g, 'dan')
-        .replace(/\s+/g, ' ')
-        .trim();
-    };
+  const normalize = (value: string) => {
+    return value
+      .toLowerCase()
+      .replace(/&/g, 'dan')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
 
-    const find = (...positions: string[]) => {
-      const wanted = positions.map(normalize);
+  const find = (...positions: string[]) => {
+    const wanted = positions.map(normalize);
 
-      return members.find((member) => {
-        return wanted.includes(normalize(member.position));
-      });
-    };
+    return members.find((member) => {
+      return wanted.includes(normalize(member.position));
+    });
+  };
 
-    return {
-      chairman: find('Ketua Koordinator'),
+  const findAll = (...positions: string[]) => {
+    const wanted = positions.map(normalize);
 
-      viceChairman: find(
-        'Wakil Ketua Koordinator',
-        'Wakil Ketua'
-      ),
+    return members
+      .filter((member) => wanted.includes(normalize(member.position)))
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+  };
 
-      secretary: find('Sekretaris'),
+  return {
+    chairman: find('Ketua Koordinator'),
 
-      viceSecretary: find(
-        'Wakil Sekretaris',
-        'Wakil Keretatis'
-      ),
+    viceChairman: find(
+      'Wakil Ketua Koordinator',
+      'Wakil Ketua'
+    ),
 
-      treasurer: find('Bendahara'),
+    secretary: find('Sekretaris'),
 
-      viceTreasurer: find('Wakil Bendahara'),
+    viceSecretary: find(
+      'Wakil Sekretaris',
+      'Wakil Keretatis'
+    ),
 
-      social: find(
-        'Koordinator Sosial & Lingkungan',
-        'Koordinator Sosial dan Lingkungan'
-      ),
+    treasurer: find('Bendahara'),
 
-      viceSocial: find(
-        'Wakil Sosial & Lingkungan',
-        'Wakil Sosial dan Lingkungan'
-      ),
+    viceTreasurer: find('Wakil Bendahara'),
 
-      youth: find('Koordinator Karang Taruna'),
+    social: find(
+      'Koordinator Sosial & Lingkungan',
+      'Koordinator Sosial dan Lingkungan'
+    ),
 
-      viceYouth1: find(
-        'Wakil Karang Taruna I',
-        'Wakil Karang Taruna 1'
-      ),
+    viceSocial: find(
+      'Wakil Sosial & Lingkungan',
+      'Wakil Sosial dan Lingkungan'
+    ),
 
-      viceYouth2: find(
-        'Wakil Karang Taruna II',
-        'Wakil Karang Taruna 2'
-      ),
+    youth: find('Koordinator Karang Taruna'),
 
-      advisor: find(
-        'Penasehat',
-        'Penasihat'
-      ),
-    };
-  }, [members]);
+    viceYouth1: find(
+      'Wakil Karang Taruna I',
+      'Wakil Karang Taruna 1'
+    ),
+
+    viceYouth2: find(
+      'Wakil Karang Taruna II',
+      'Wakil Karang Taruna 2'
+    ),
+
+    advisors: findAll(
+      'Penasehat',
+      'Penasihat'
+    ),
+  };
+}, [members]);
 
   const profileMembers = useMemo(() => {
     return [...members].sort((a, b) => {
@@ -446,12 +454,15 @@ export default function PengurusView() {
               </p>
             </div>
 
-            <div className="flex justify-center">
-              <MemberCard
-                member={organization.advisor}
-                compact
-              />
-            </div>
+            <div className="flex flex-wrap justify-center gap-5">
+  {organization.advisors.map((advisor) => (
+    <MemberCard
+      key={advisor.id}
+      member={advisor}
+      compact
+    />
+  ))}
+</div>
           </div>
         </div>
       </div>
