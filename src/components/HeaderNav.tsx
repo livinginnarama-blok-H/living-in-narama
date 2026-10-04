@@ -103,6 +103,16 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
             >
               Dokumentasi
             </button>
+                        <button
+              onClick={() => onSelectTab('pengurus')}
+              className={`px-3 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
+                activeTab === 'pengurus'
+                  ? 'text-emerald-800 bg-emerald-50/80 font-semibold'
+                  : 'text-slate-600 hover:text-emerald-800 hover:bg-slate-50'
+              }`}
+            >
+              Pengurus
+            </button>
           </nav>
 
           {/* Zone 3: Primary Actions */}

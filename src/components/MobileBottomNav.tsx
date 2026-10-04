@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TabKey } from '../types/portal';
-import { Home, Bell, Calendar, Wallet, MoreHorizontal, Briefcase, Camera, Lock, X } from 'lucide-react';
+import { Home, Bell, Calendar, Wallet, MoreHorizontal, Briefcase, Camera, Lock, X, Users } from 'lucide-react';
 
 interface MobileBottomNavProps {
   activeTab: TabKey;
@@ -20,7 +20,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     setShowMoreMenu(false);
   };
 
-  const isMoreActive = activeTab === 'proker' || activeTab === 'dokumentasi' || activeTab === 'admin';
+  const isMoreActive =
+  activeTab === 'proker' ||
+  activeTab === 'dokumentasi' ||
+  activeTab === 'pengurus' ||
+  activeTab === 'admin';
 
   return (
     <>
@@ -44,7 +48,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 py-2">
+            <div className="grid grid-cols-4 gap-3 py-2">
               <button
                 onClick={() => handleSelect('proker')}
                 className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-colors min-h-[72px] ${
@@ -68,7 +72,17 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 <Camera className="w-5 h-5 mb-1.5 text-emerald-700" />
                 <span className="text-xs font-medium">Dokumentasi</span>
               </button>
-
+              <button           
+                onClick={() => handleSelect('pengurus')}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-colors min-h-[72px] ${
+                  activeTab === 'pengurus'
+                    ? 'border-emerald-700 bg-emerald-50 text-emerald-900'
+                    : 'border-slate-100 bg-slate-50 text-slate-700'
+                }`}
+              >
+                <Users className="w-5 h-5 mb-1.5 text-emerald-700" />
+                <span className="text-xs font-medium">Pengurus</span>
+              </button>
               <button
                 onClick={() => handleSelect('admin')}
                 className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-colors min-h-[72px] ${

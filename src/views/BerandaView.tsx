@@ -513,7 +513,7 @@ const upcomingAgendas = agendas
             <span>Mengenal Lingkungan Kita</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
-            Hunian Harmonis di Lereng Hijau Griya Adika Narama
+            Hunian Harmonis di Gunung Sindur Griya Adika Narama
           </h2>
           <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
             Portal resmi ini dipersiapkan sebagai media koordinasi, informasi, dan transparansi warga Blok H.

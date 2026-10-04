@@ -24,6 +24,7 @@ export type TabKey =
   | 'proker'
   | 'keuangan'
   | 'dokumentasi'
+  | 'pengurus'
   | 'admin';
 
 /**
@@ -667,4 +668,21 @@ export interface ApiResponse<T> {
   message?: string;
 
   timestamp: string;
+}
+export interface OrganizationMember {
+  id: string;
+  name: string;
+  position: string;
+  division?: string | null;
+  photoUrl?: string | null;
+  phone?: string | null;
+  bio?: string | null;
+  responsibilities?: string | null;
+  parentId?: string | null;
+  displayOrder: number;
+  isActive: boolean;
+  periodStart: string;
+  periodEnd: string;
+  createdAt: string;
+  updatedAt: string;
 }

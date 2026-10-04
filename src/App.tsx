@@ -19,6 +19,7 @@ import { AgendaView } from './views/AgendaView';
 import { ProgramKerjaView } from './views/ProgramKerjaView';
 import { KeuanganView } from './views/KeuanganView';
 import { DokumentasiView } from './views/DokumentasiView';
+import PengurusView from './views/PengurusView';
 import { AdminView } from './views/AdminView';
 
 export default function App() {
@@ -38,6 +39,8 @@ export default function App() {
       return 'dokumentasi';
     case '/admin':
       return 'admin';
+    case '/pengurus':
+      return 'pengurus';
     default:
       return 'beranda';
   }
@@ -86,6 +89,7 @@ const [activeTab, setActiveTab] = useState<TabKey>(getTabFromPath());
     proker: '/program-kerja',
     keuangan: '/keuangan',
     dokumentasi: '/dokumentasi',
+    pengurus: '/pengurus',
     admin: '/admin',
   };
 
@@ -141,6 +145,8 @@ setActiveTab('beranda');
         {activeTab === 'keuangan' && <KeuanganView isAdmin={isAdmin} />}
 
         {activeTab === 'dokumentasi' && <DokumentasiView isAdmin={isAdmin} />}
+
+        {activeTab === 'pengurus' && <PengurusView />}
 
         {activeTab === 'admin' && (
           <AdminView

@@ -39,6 +39,7 @@ import {
   IPLPaymentStatus,
   IPLRecap,
   PaymentMethod,
+  OrganizationMember,
 } from '../types/portal';
 import {
   INITIAL_ANNOUNCEMENTS,
@@ -339,6 +340,9 @@ export interface IPortalDataRepository {
   addAgenda(item: Omit<EventAgenda, 'id' | 'createdAt'>): Promise<EventAgenda>;
   deleteAgenda(id: string): Promise<void>;
 
+  // Organization / Pengurus
+  fetchOrganizationMembers(): Promise<OrganizationMember[]>;
+
   // Programs
   getWorkPrograms(): Program[];
   fetchWorkPrograms(): Promise<Program[]>;
@@ -580,7 +584,43 @@ export const DataService: IPortalDataRepository = {
     setStored<EventAgenda[]>('__agenda_supabase_cache__', agendas);
     return agendas;
   },
+    async fetchOrganizationMembers(): Promise<OrganizationMember[]> {
+    const { data, error } = await supabase
+      .from('organization_members')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
 
+    if (error) {
+      console.error(
+        '[DataService] Supabase fetchOrganizationMembers error:',
+        error
+      );
+      throw new Error(
+        error.message || 'Gagal memuat data pengurus dari Supabase'
+      );
+    }
+
+    const members: OrganizationMember[] = (data || []).map((item) => ({
+      id: item.id,
+      name: item.name,
+      position: item.position,
+      division: item.division,
+      photoUrl: item.photo_url,
+      phone: item.phone,
+      bio: item.bio,
+      responsibilities: item.responsibilities,
+      parentId: item.parent_id,
+      displayOrder: item.display_order,
+      isActive: item.is_active,
+      periodStart: item.period_start,
+      periodEnd: item.period_end,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    }));
+
+    return members;
+  },
   async addAgenda(
     item: Omit<EventAgenda, 'id' | 'createdAt'>
   ): Promise<EventAgenda> {
