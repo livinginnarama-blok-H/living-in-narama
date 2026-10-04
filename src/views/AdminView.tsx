@@ -465,11 +465,8 @@ const kosongCount = activeHouseholds.filter(
               : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
           }`}
         >
-          
-      
-          <Database className="w-3.5 h-3.5" />
-          <span>Pengaturan Data Mock</span>
-        </button>
+          </button>
+   
       </div>
            {/* Tab 1: Aspirasi & Laporan Warga */}
       {adminTab === 'laporan' && (
@@ -898,26 +895,6 @@ const kosongCount = activeHouseholds.filter(
     </div>
   </div>
 )}
-
-      {/* Tab 3: Pengaturan Data */}
-      {adminTab === 'data' && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-          <h3 className="text-base font-bold text-slate-900">Manajemen Data Mock Sementara</h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Semua manipulasi data di panel pengurus saat ini ditangani secara tersentralisasi melalui <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">dataService.ts</code>. Komponen antarmuka tidak mengakses penyimpanan peramban secara langsung.
-          </p>
-
-          <div className="pt-2">
-            <button
-              onClick={handleResetData}
-              className="px-4 py-2 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-lg flex items-center gap-1.5 transition-colors"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Reset Kembali ke Data Mock Awal Blok H</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
