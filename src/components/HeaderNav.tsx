@@ -1,6 +1,6 @@
 import React from 'react';
 import { TabKey } from '../types/portal';
-import { Shield, Trees, AlertCircle, UserCheck, LogOut } from 'lucide-react';
+import { Shield, AlertCircle, UserCheck, LogOut } from 'lucide-react';
 
 interface HeaderNavProps {
   activeTab: TabKey;
@@ -28,8 +28,12 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
             onClick={() => onSelectTab('beranda')}
             className="flex items-center gap-2.5 text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 rounded-md py-1"
           >
-            <div className="w-9 h-9 rounded-lg bg-emerald-800 text-emerald-50 flex items-center justify-center shadow-sm group-hover:bg-emerald-700 transition-colors">
-              <Trees className="w-5 h-5 text-emerald-200" />
+            <div className="w-11 h-11 shrink-0 flex items-center justify-center">
+              <img
+                src="/logo-gan.png"
+                alt="Griya Adika Narama"
+                className="w-full h-full object-contain"
+               />
             </div>
             <div>
               <span className="text-base sm:text-lg font-bold tracking-tight text-slate-900 group-hover:text-emerald-900 transition-colors">
