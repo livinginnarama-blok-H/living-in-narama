@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TabKey, Announcement, EventAgenda, RondaSchedule, Household } from '../types/portal';
+import { TabKey, Announcement, EventAgenda, RondaSchedule, Household, FinancialTransaction } from '../types/portal';
 import { DataService } from '../services/dataService';
 import heroImage from '@/src/assets/images/hero_mountain_housing_1790351060957.jpg';
 import {
@@ -35,6 +35,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
   const [metrics, setMetrics] = useState(() => DataService.getFinancialMetrics());
   const [rondaSchedules, setRondaSchedules] = useState<RondaSchedule[]>([]);
   const [households, setHouseholds] = useState<Household[]>(() => DataService.getHouseholds());
+  const [lastFinanceUpdate, setLastFinanceUpdate] = useState<string | null>(null);
 
   // Centralized DataService Subscription
   useEffect(() => {
@@ -73,9 +74,33 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
     try {
       await DataService.fetchTransactions(true);
 
-      if (!cancelled) {
-        setMetrics(DataService.getFinancialMetrics());
-      }
+if (!cancelled) {
+  setMetrics(DataService.getFinancialMetrics());
+
+  const transactions = DataService.getTransactions(true);
+
+  const latestTransaction = transactions
+    .filter((transaction) => transaction.type === 'in' || transaction.type === 'out')
+    .reduce<FinancialTransaction | null>((latest, transaction) => {
+      const transactionTime = new Date(
+        transaction.updatedAt || transaction.createdAt || transaction.date
+      ).getTime();
+
+      if (!latest) return transaction;
+
+      const latestTime = new Date(
+        latest.updatedAt || latest.createdAt || latest.date
+      ).getTime();
+
+      return transactionTime > latestTime ? transaction : latest;
+    }, null);
+
+  setLastFinanceUpdate(
+    latestTransaction?.updatedAt ||
+    latestTransaction?.createdAt ||
+    null
+  );
+}
     } catch (error) {
       console.error('[BerandaView] Gagal memuat transaksi keuangan:', error);
     }
@@ -221,40 +246,42 @@ const upcomingAgendas = agendas
           </div>
         </div>
 
-        {/* Mountain Highlight Bar */}
-        <div className="relative z-10 bg-emerald-900/80 backdrop-blur-md border-t border-emerald-800/60 px-6 py-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-          <div>
-            <span className="block text-emerald-300 text-[11px] font-medium">Unit Hunian Warga</span>
-            <span className="text-sm sm:text-base font-bold text-white">
-              {activeHouseholds.length > 0
-  ? `${activeHouseholds.length} Unit Terdata`
-  : '[Menunggu Data Resmi]'}
-            </span>
-            {activeHouseholds.length > 0 && (
-  <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
-    {huniCount} Huni · {semiHuniCount} Semi Huni · {kosongCount} Kosong
+{/* Mountain Highlight Bar */}
+<div className="relative z-10 bg-emerald-900/80 backdrop-blur-md border-t border-emerald-800/60 px-6 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+  <div>
+    <span className="block text-emerald-300 text-[11px] font-medium">Unit Hunian Warga</span>
+    <span className="text-sm sm:text-base font-bold text-white">
+      {activeHouseholds.length > 0
+        ? `${activeHouseholds.length} Unit Terdata`
+        : '[Menunggu Data Resmi]'}
+    </span>
+    {activeHouseholds.length > 0 && (
+      <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
+        {huniCount} Huni · {semiHuniCount} Semi Huni · {kosongCount} Kosong
+      </span>
+    )}
+  </div>
+
+  <div>
+  <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas</span>
+  <span className="text-sm sm:text-base font-bold text-white tabular-nums">
+    {formatCurrency(metrics.currentBalance)}
   </span>
-)}
-          </div>
-          <div>
-            <span className="block text-emerald-300 text-[11px] font-medium">Keamanan Lingkungan</span>
-            <span className="text-sm sm:text-base font-bold text-white">
-              Sistem Keamanan Terpadu
-            </span>
-          </div>
-          <div>
-            <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas</span>
-            <span className="text-sm sm:text-base font-bold text-white tabular-nums">
-              {formatCurrency(metrics.currentBalance)}
-            </span>
-          </div>
-          <div>
-            <span className="block text-emerald-300 text-[11px] font-medium">Status Rekapitulasi Kas</span>
-            <span className="text-sm sm:text-base font-bold text-emerald-200">
-              Rekapitulasi Kas Warga
-            </span>
-          </div>
-        </div>
+
+  {lastFinanceUpdate && (
+    <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
+      Diperbarui: {new Date(lastFinanceUpdate).toLocaleString('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })} WIB
+    </span>
+  )}
+</div>
+</div>
       </section>
 
       {/* Pinned Announcement Highlight */}

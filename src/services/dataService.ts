@@ -1711,6 +1711,8 @@ async deactivateHousehold(id: string): Promise<Household> {
       iplPaymentId: item.ipl_payment_id || undefined,
       createdBy: item.created_by || undefined,
       updatedBy: item.updated_by || undefined,
+      CreatedAt: item.created_at || undefined,
+      updatedAt: item.updated_at || undefined,
     }))
     .filter((item) => includeVoid || item.status !== 'void');
 
