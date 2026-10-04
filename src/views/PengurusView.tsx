@@ -257,7 +257,7 @@ export default function PengurusView() {
       .trim();
   };
 
-  const find = (...positions: string[]) => {
+    const find = (...positions: string[]) => {
     const wanted = positions.map(normalize);
 
     return members.find((member) => {
@@ -270,6 +270,21 @@ export default function PengurusView() {
 
     return members
       .filter((member) => wanted.includes(normalize(member.position)))
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+  };
+
+  const findAdvisors = () => {
+    return members
+      .filter((member) => {
+        const position = normalize(member.position);
+
+        return (
+          position === 'penasehat' ||
+          position === 'penasihat' ||
+          position.startsWith('penasehat ') ||
+          position.startsWith('penasihat ')
+        );
+      })
       .sort((a, b) => a.displayOrder - b.displayOrder);
   };
 
@@ -314,10 +329,7 @@ export default function PengurusView() {
       'Wakil Karang Taruna 2'
     ),
 
-    advisors: findAll(
-      'Penasehat',
-      'Penasihat'
-    ),
+    advisors: findAdvisors(),
   };
 }, [members]);
 
@@ -455,12 +467,12 @@ export default function PengurusView() {
             </div>
 
             <div className="flex flex-wrap justify-center gap-5">
-  {organization.advisors.map((advisor) => (
-    <MemberCard
-      key={advisor.id}
-      member={advisor}
-      compact
-    />
+              {organization.advisors.map((advisor) => (
+              <MemberCard
+                key={advisor.id}
+                member={advisor}
+               compact
+               />
   ))}
 </div>
           </div>
