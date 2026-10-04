@@ -672,10 +672,8 @@ export const DataService: IPortalDataRepository = {
   async addOrganizationMember(
   item: Omit<OrganizationMember, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<OrganizationMember> {
-  const id = generateSafeId('org');
 
   const payload = {
-    id,
     name: item.name,
     position: item.position,
     division: item.division ?? null,
