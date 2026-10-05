@@ -333,7 +333,11 @@ export interface IPortalDataRepository {
   getAnnouncements(): Announcement[];
   fetchAnnouncements(): Promise<Announcement[]>;
   addAnnouncement(item: Omit<Announcement, 'id' | 'createdAt'>): Promise<Announcement>;
-  deleteAnnouncement(id: string): Promise<void>;
+updateAnnouncement(
+  id: string,
+  item: Partial<Omit<Announcement, 'id' | 'createdAt'>>
+): Promise<Announcement>;
+deleteAnnouncement(id: string): Promise<void>;
 
   // Agendas / Events
   getAgendas(): EventAgenda[];
@@ -586,6 +590,64 @@ export const DataService: IPortalDataRepository = {
   emitDataChange();
 
   return created;
+},
+async updateAnnouncement(
+  id: string,
+  item: Partial<Omit<Announcement, 'id' | 'createdAt'>>
+): Promise<Announcement> {
+  const updateData: Record<string, unknown> = {};
+
+  if (item.title !== undefined) updateData.title = item.title;
+  if (item.category !== undefined) updateData.category = item.category;
+  if (item.date !== undefined) updateData.date = item.date;
+  if (item.author !== undefined) updateData.author = item.author;
+  if (item.content !== undefined) updateData.content = item.content;
+  if (item.isPinned !== undefined) updateData.is_pinned = item.isPinned;
+  if (item.tagline !== undefined) {
+    updateData.tagline = item.tagline ?? null;
+  }
+
+  updateData.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('announcements')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[DataService] Supabase updateAnnouncement error:', error);
+    throw new Error(
+      error.message || 'Gagal memperbarui pengumuman di Supabase'
+    );
+  }
+
+  const updated: Announcement = {
+    id: data.id,
+    title: data.title,
+    category: data.category,
+    date: data.date,
+    author: data.author,
+    content: data.content,
+    isPinned: data.is_pinned,
+    tagline: data.tagline || undefined,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+
+  const current = this.getAnnouncements();
+
+  setStored<Announcement[]>(
+    STORAGE_KEYS.ANNOUNCEMENTS,
+    current.map((announcement) =>
+      announcement.id === id ? updated : announcement
+    )
+  );
+
+  emitDataChange();
+
+  return updated;
 },
   async deleteAnnouncement(id: string): Promise<void> {
   const { error } = await supabase

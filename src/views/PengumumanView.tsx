@@ -13,6 +13,7 @@ import {
   Check,
   X,
   FileText,
+  Pencil,
 } from 'lucide-react';
 
 interface PengumumanViewProps {
@@ -26,6 +27,14 @@ export const PengumumanView: React.FC<PengumumanViewProps> = ({ isAdmin }) => {
   const [activeCategory, setActiveCategory] = useState<string>('semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editCategory, setEditCategory] = useState<Announcement['category']>('umum');
+  const [editAuthor, setEditAuthor] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editIsPinned, setEditIsPinned] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Subscribe to centralized DataService
@@ -111,7 +120,57 @@ export const PengumumanView: React.FC<PengumumanViewProps> = ({ isAdmin }) => {
       );
     }
   };
+    const handleEdit = (item: Announcement, e: React.MouseEvent) => {
+    e.stopPropagation();
 
+    setEditingAnnouncement(item);
+    setEditTitle(item.title);
+    setEditCategory(item.category);
+    setEditAuthor(item.author);
+    setEditContent(item.content);
+    setEditDate(item.date);
+    setEditIsPinned(item.isPinned);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!editingAnnouncement) return;
+
+    if (!editTitle.trim() || !editContent.trim()) {
+      window.alert('Judul dan isi pengumuman wajib diisi.');
+      return;
+    }
+
+    try {
+      await DataService.updateAnnouncement(
+        editingAnnouncement.id,
+        {
+          title: editTitle.trim(),
+          category: editCategory,
+          author: editAuthor.trim(),
+          content: editContent.trim(),
+          date: editDate,
+          isPinned: editIsPinned,
+        }
+      );
+
+      const data = await DataService.fetchAnnouncements();
+      setAnnouncements(data);
+
+      setIsEditModalOpen(false);
+      setEditingAnnouncement(null);
+    } catch (error) {
+      console.error('[PengumumanView] Gagal mengedit pengumuman:', error);
+
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Gagal memperbarui pengumuman.'
+      );
+    }
+  };
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
 
@@ -135,7 +194,7 @@ export const PengumumanView: React.FC<PengumumanViewProps> = ({ isAdmin }) => {
       );
     }
   };
-
+  
   const handleShare = (item: Announcement, e: React.MouseEvent) => {
     e.stopPropagation();
     const text = `*Pengumuman Blok H*: ${item.title}\n\n${item.content}\n\n- ${item.author} (${item.date})`;
@@ -252,13 +311,23 @@ export const PengumumanView: React.FC<PengumumanViewProps> = ({ isAdmin }) => {
                     <Share2 className="w-4 h-4" />
                   </button>
                   {isAdmin && (
-                    <button
-                      onClick={(e) => handleDelete(item.id, e)}
-                      className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
-                      title="Hapus Pengumuman"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <>
+                      <button
+                        onClick={(e) => handleEdit(item, e)}
+                        className="p-1 text-slate-400 hover:text-emerald-600 rounded transition-colors"
+                        title="Edit Pengumuman"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={(e) => handleDelete(item.id, e)}
+                        className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                        title="Hapus Pengumuman"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -445,6 +514,152 @@ export const PengumumanView: React.FC<PengumumanViewProps> = ({ isAdmin }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+        {/* Edit Announcement Modal */}
+      {isEditModalOpen && editingAnnouncement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div
+            className="fixed inset-0"
+            onClick={() => setIsEditModalOpen(false)}
+          />
+
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Edit Pengumuman
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Perbarui informasi pengumuman warga
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
+                aria-label="Tutup"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-3.5">
+  <div>
+    <label className="block text-xs font-semibold text-slate-700 mb-1">
+      Judul Pengumuman
+    </label>
+    <input
+      type="text"
+      required
+      value={editTitle}
+      onChange={(e) => setEditTitle(e.target.value)}
+      placeholder="Judul pengumuman"
+      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700"
+    />
+  </div>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div>
+      <label className="block text-xs font-semibold text-slate-700 mb-1">
+        Kategori
+      </label>
+      <select
+        value={editCategory}
+        onChange={(e) =>
+          setEditCategory(e.target.value as Announcement['category'])
+        }
+        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700 bg-white"
+      >
+        <option value="umum">Umum</option>
+        <option value="penting">Penting</option>
+        <option value="iuran">Iuran</option>
+        <option value="keamanan">Keamanan</option>
+        <option value="kerja-bakti">Kerja Bakti</option>
+        <option value="kegiatan">Kegiatan</option>
+      </select>
+    </div>
+
+    <div>
+      <label className="block text-xs font-semibold text-slate-700 mb-1">
+        Tanggal
+      </label>
+      <input
+        type="date"
+        required
+        value={editDate}
+        onChange={(e) => setEditDate(e.target.value)}
+        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700"
+      />
+    </div>
+  </div>
+
+  <div>
+    <label className="block text-xs font-semibold text-slate-700 mb-1">
+      Penulis / Admin
+    </label>
+    <input
+      type="text"
+      required
+      value={editAuthor}
+      onChange={(e) => setEditAuthor(e.target.value)}
+      placeholder="Nama penulis"
+      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700"
+    />
+  </div>
+
+  <div>
+    <label className="block text-xs font-semibold text-slate-700 mb-1">
+      Isi Pengumuman
+    </label>
+    <textarea
+      required
+      rows={6}
+      value={editContent}
+      onChange={(e) => setEditContent(e.target.value)}
+      placeholder="Tuliskan isi pengumuman lengkap untuk warga..."
+      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700 resize-y"
+    />
+  </div>
+
+  <div className="flex items-center gap-2">
+    <input
+      type="checkbox"
+      id="editPinCheck"
+      checked={editIsPinned}
+      onChange={(e) => setEditIsPinned(e.target.checked)}
+      className="rounded text-emerald-800 focus:ring-emerald-700"
+    />
+    <label
+      htmlFor="editPinCheck"
+      className="text-xs text-slate-700 font-medium cursor-pointer"
+    >
+      Sematkan di Beranda Utama (Pengumuman Prioritas)
+    </label>
+  </div>
+
+  <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+    <button
+      type="button"
+      onClick={() => {
+        setIsEditModalOpen(false);
+        setEditingAnnouncement(null);
+      }}
+      className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+    >
+      Batal
+    </button>
+
+    <button
+      type="submit"
+      className="px-4 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-700 rounded-lg transition-colors"
+    >
+      Simpan Perubahan
+    </button>
+  </div>
+</form>
           </div>
         </div>
       )}
