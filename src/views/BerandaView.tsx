@@ -154,7 +154,9 @@ const todayRonda =
     (r) => r.day.toLowerCase() === todayName.toLowerCase()
   ) || null;
 
-const pinnedAnnouncement = announcements.find((a) => a.isPinned) || announcements[0];
+const pinnedAnnouncements = announcements
+  .filter((a) => a.isPinned)
+  .slice(0, 3);
 
 const today = new Date();
 today.setHours(0, 0, 0, 0);
@@ -286,37 +288,72 @@ const upcomingAgendas = agendas
       </section>
 
       {/* Pinned Announcement Highlight */}
-      {pinnedAnnouncement && (
-        <section className="bg-white rounded-2xl border border-emerald-900/10 p-5 sm:p-6 shadow-xs relative overflow-hidden">
-          <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-emerald-700" />
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-xs text-emerald-700 font-semibold">
-                <span className="uppercase tracking-wider">Pengumuman Penting</span>
-                <span aria-hidden="true">·</span>
-                <span className="text-slate-500 font-normal">{pinnedAnnouncement.date}</span>
-                <span aria-hidden="true">·</span>
-                <span className="text-slate-500 font-normal">{pinnedAnnouncement.author}</span>
-              </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
-                {pinnedAnnouncement.title}
+{pinnedAnnouncements.length > 0 && (
+  <section className="space-y-3">
+    <div className="flex items-center justify-between">
+      <div>
+        <h2 className="text-sm sm:text-base font-bold text-slate-900">
+          Pengumuman Penting
+        </h2>
+        <p className="text-xs text-slate-500 mt-0.5">
+          Informasi penting yang sedang diprioritaskan
+        </p>
+      </div>
+
+      <button
+        onClick={() => onSelectTab('pengumuman')}
+        className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 transition-colors"
+      >
+        Lihat Semua
+      </button>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {pinnedAnnouncements.map((announcement) => (
+        <article
+          key={announcement.id}
+          className="bg-white rounded-2xl border border-emerald-900/10 p-5 shadow-xs relative overflow-hidden flex flex-col justify-between"
+        >
+          <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-700" />
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md">
+                Penting
+              </span>
+
+              <span className="text-[11px] text-slate-500">
+                {announcement.date}
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug line-clamp-2">
+                {announcement.title}
               </h3>
-              <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 leading-relaxed">
-                {pinnedAnnouncement.content}
+
+              <p className="mt-2 text-xs sm:text-sm text-slate-600 line-clamp-3 leading-relaxed">
+                {announcement.content}
               </p>
             </div>
-            <div className="shrink-0 flex items-center gap-2">
-              <button
-                onClick={() => setSelectedAnnouncement(pinnedAnnouncement)}
-                className="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors flex items-center gap-1.5"
-              >
-                <span>Baca Selengkapnya</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+
+            <div className="text-[11px] text-slate-500">
+              {announcement.author}
             </div>
           </div>
-        </section>
-      )}
+
+          <button
+            onClick={() => setSelectedAnnouncement(announcement)}
+            className="mt-4 w-full px-3 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+          >
+            <span>Baca Selengkapnya</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </article>
+      ))}
+    </div>
+  </section>
+)}
 
       {/* 3-Column Bento Grid: Agenda Terdekat, Transparansi Kas, Jadwal Ronda */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
