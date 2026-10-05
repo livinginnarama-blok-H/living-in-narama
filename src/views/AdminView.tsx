@@ -101,6 +101,15 @@ const [emergencyContactError, setEmergencyContactError] = useState<string | null
 const [isEmergencyContactModalOpen, setIsEmergencyContactModalOpen] = useState(false);
 const [editingEmergencyContact, setEditingEmergencyContact] = useState<EmergencyContact | null>(null);
 const [isSavingEmergencyContact, setIsSavingEmergencyContact] = useState(false);
+const [emergencyContactTitle, setEmergencyContactTitle] = useState('');
+const [emergencyContactName, setEmergencyContactName] = useState('');
+const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
+const [emergencyContactDescription, setEmergencyContactDescription] = useState('');
+const [emergencyContactBadge, setEmergencyContactBadge] = useState('');
+const [emergencyContactIcon, setEmergencyContactIcon] = useState('ShieldAlert');
+const [emergencyContactColor, setEmergencyContactColor] = useState('emerald');
+const [emergencyContactSortOrder, setEmergencyContactSortOrder] = useState(0);
+const [emergencyContactIsActive, setEmergencyContactIsActive] = useState(true);
 const [communityAchievementTitle, setCommunityAchievementTitle] =
   useState('');
 const [communityAchievementRecipient, setCommunityAchievementRecipient] =
@@ -393,6 +402,147 @@ const openCommunityGroupModal = (
   setCommunityGroupPhotoFile(null);
   setCommunityGroupPhotoPreview(group?.photoUrl ?? '');
   setIsCommunityGroupModalOpen(true);
+};
+const openEmergencyContactModal = (
+  contact: EmergencyContact | null = null
+) => {
+  setEditingEmergencyContact(contact);
+  setEmergencyContactTitle(contact?.title ?? '');
+  setEmergencyContactName(contact?.name ?? '');
+  setEmergencyContactPhone(contact?.phone ?? '');
+  setEmergencyContactDescription(contact?.description ?? '');
+  setEmergencyContactBadge(contact?.badge ?? '');
+  setEmergencyContactIcon(contact?.icon ?? 'ShieldAlert');
+  setEmergencyContactColor(contact?.color ?? 'emerald');
+  setEmergencyContactSortOrder(contact?.sortOrder ?? emergencyContacts.length + 1);
+  setEmergencyContactIsActive(contact?.isActive ?? true);
+  setIsEmergencyContactModalOpen(true);
+};
+const saveEmergencyContact = async () => {
+  if (!emergencyContactTitle.trim()) {
+    setEmergencyContactError('Judul kontak wajib diisi.');
+    return;
+  }
+
+  if (!emergencyContactPhone.trim()) {
+    setEmergencyContactError('Nomor telepon wajib diisi.');
+    return;
+  }
+
+  try {
+    setIsSavingEmergencyContact(true);
+    setEmergencyContactError(null);
+
+    const payload = {
+      title: emergencyContactTitle.trim(),
+      name: emergencyContactName.trim(),
+      phone: emergencyContactPhone.trim(),
+      description: emergencyContactDescription.trim(),
+      badge: emergencyContactBadge.trim(),
+      icon: emergencyContactIcon,
+      color: emergencyContactColor,
+      sortOrder: emergencyContactSortOrder,
+      isActive: emergencyContactIsActive,
+    };
+
+    if (editingEmergencyContact) {
+      const updated = await DataService.updateEmergencyContact(
+        editingEmergencyContact.id,
+        payload
+      );
+
+      setEmergencyContacts((current) =>
+        current.map((item) =>
+          item.id === updated.id ? updated : item
+        )
+      );
+    } else {
+      const created = await DataService.addEmergencyContact(payload);
+
+      setEmergencyContacts((current) =>
+        [...current, created].sort(
+          (a, b) => a.sortOrder - b.sortOrder
+        )
+      );
+    }
+
+    setIsEmergencyContactModalOpen(false);
+    setEditingEmergencyContact(null);
+  } catch (err) {
+    console.error(
+      '[AdminView] Gagal menyimpan kontak darurat:',
+      err
+    );
+
+    setEmergencyContactError(
+      err instanceof Error
+        ? err.message
+        : 'Gagal menyimpan kontak darurat.'
+    );
+  } finally {
+    setIsSavingEmergencyContact(false);
+  }
+};
+const toggleEmergencyContact = async (
+  contact: EmergencyContact
+) => {
+  try {
+    setEmergencyContactError(null);
+
+    const updated = await DataService.updateEmergencyContact(
+      contact.id,
+      {
+        isActive: !contact.isActive,
+      }
+    );
+
+    setEmergencyContacts((current) =>
+      current.map((item) =>
+        item.id === updated.id ? updated : item
+      )
+    );
+  } catch (err) {
+    console.error(
+      '[AdminView] Gagal mengubah status kontak darurat:',
+      err
+    );
+
+    setEmergencyContactError(
+      err instanceof Error
+        ? err.message
+        : 'Gagal mengubah status kontak darurat.'
+    );
+  }
+};
+const deleteEmergencyContact = async (
+  contact: EmergencyContact
+) => {
+  const confirmed = window.confirm(
+    `Hapus kontak "${contact.title}"?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setEmergencyContactError(null);
+
+    await DataService.deleteEmergencyContact(contact.id);
+
+    setEmergencyContacts((current) =>
+      current.filter((item) => item.id !== contact.id)
+    );
+  } catch (err) {
+    console.error(
+      '[AdminView] Gagal menghapus kontak darurat:',
+      err
+    );
+
+    setEmergencyContactError(
+      err instanceof Error
+        ? err.message
+        : 'Gagal menghapus kontak darurat.'
+    );
+  }
 };
   const openOrganizationMemberModal = (
     
@@ -2085,8 +2235,410 @@ const kosongCount = activeHouseholds.filter(
             </>
           )}
         </div>
+            )}
+
+      {adminTab === 'kontak' && (
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Kontak Darurat
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Kelola kontak satpam dan nomor darurat yang ditampilkan
+                  kepada warga.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => openEmergencyContactModal()}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-900"
+              >
+                <Plus className="h-4 w-4" />
+                Tambah Kontak
+              </button>
+            </div>
+          </div>
+
+          {/* Error */}
+          {emergencyContactError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+              {emergencyContactError}
+            </div>
+          )}
+
+          {/* Loading */}
+          {isLoadingEmergencyContacts ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
+              <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-700" />
+              <p className="mt-3 text-xs text-slate-500">
+                Memuat kontak darurat...
+              </p>
+            </div>
+          ) : emergencyContacts.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center">
+              <ShieldAlert className="mx-auto h-8 w-8 text-slate-400" />
+              <p className="mt-3 text-sm font-semibold text-slate-700">
+                Belum ada kontak darurat
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Tambahkan kontak satpam atau nomor darurat untuk ditampilkan
+                kepada warga.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {[...emergencyContacts]
+                .sort((a, b) => a.sortOrder - b.sortOrder)
+                .map((contact) => (
+                  <div
+                    key={contact.id}
+                    className={`rounded-2xl border bg-white p-4 shadow-sm ${
+                      contact.isActive
+                        ? 'border-slate-200'
+                        : 'border-slate-200 opacity-70'
+                    }`}
+                  >
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                            contact.color === 'blue'
+                              ? 'bg-blue-50 text-blue-700'
+                              : contact.color === 'rose'
+                                ? 'bg-rose-50 text-rose-700'
+                                : contact.color === 'amber'
+                                  ? 'bg-amber-50 text-amber-700'
+                                  : contact.color === 'slate'
+                                    ? 'bg-slate-100 text-slate-700'
+                                    : 'bg-emerald-50 text-emerald-700'
+                          }`}
+                        >
+                          <ShieldAlert className="h-5 w-5" />
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="text-sm font-bold text-slate-900">
+                              {contact.title}
+                            </h4>
+
+                            {contact.badge && (
+                              <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                                {contact.badge}
+                              </span>
+                            )}
+
+                            <span
+                              className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+                                contact.isActive
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-slate-100 text-slate-500'
+                              }`}
+                            >
+                              {contact.isActive ? 'Aktif' : 'Nonaktif'}
+                            </span>
+                          </div>
+
+                          {contact.name && (
+                            <p className="mt-1 text-xs font-medium text-slate-700">
+                              {contact.name}
+                            </p>
+                          )}
+
+                          <p className="mt-1 text-sm font-semibold text-emerald-700">
+                            {contact.phone || 'Tidak ada nomor'}
+                          </p>
+
+                          {contact.description && (
+                            <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                              {contact.description}
+                            </p>
+                          )}
+
+                          <p className="mt-1 text-[10px] text-slate-400">
+                            Urutan tampilan: {contact.sortOrder}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEmergencyContactModal(contact)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleEmergencyContact(contact)}
+                          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                            contact.isActive
+                              ? 'border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                              : 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          }`}
+                        >
+                          {contact.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => deleteEmergencyContact(contact)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Hapus
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
       )}
-            {/* Modal Tambah / Edit Komunitas */}
+            {/* Modal Tambah / Edit Kontak Darurat */}
+      {isEmergencyContactModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingEmergencyContact
+                    ? 'Edit Kontak Darurat'
+                    : 'Tambah Kontak Darurat'}
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Atur informasi kontak yang akan ditampilkan kepada warga.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsEmergencyContactModalOpen(false)}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Tutup"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="overflow-y-auto px-5 py-5 sm:px-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Judul */}
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Judul Kontak *
+                  </label>
+                  <input
+                    type="text"
+                    value={emergencyContactTitle}
+                    onChange={(e) =>
+                      setEmergencyContactTitle(e.target.value)
+                    }
+                    placeholder="Contoh: Satpam Blok H"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                {/* Nama */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Nama / Petugas
+                  </label>
+                  <input
+                    type="text"
+                    value={emergencyContactName}
+                    onChange={(e) =>
+                      setEmergencyContactName(e.target.value)
+                    }
+                    placeholder="Contoh: Pos Satpam Blok H"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                {/* Nomor Telepon */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Nomor Telepon *
+                  </label>
+                  <input
+                    type="tel"
+                    value={emergencyContactPhone}
+                    onChange={(e) =>
+                      setEmergencyContactPhone(e.target.value)
+                    }
+                    placeholder="Contoh: 081234567890"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                {/* Deskripsi */}
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Deskripsi
+                  </label>
+                  <textarea
+                    value={emergencyContactDescription}
+                    onChange={(e) =>
+                      setEmergencyContactDescription(e.target.value)
+                    }
+                    placeholder="Keterangan singkat mengenai kontak ini."
+                    rows={3}
+                    className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                {/* Badge */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Badge
+                  </label>
+                  <input
+                    type="text"
+                    value={emergencyContactBadge}
+                    onChange={(e) =>
+                      setEmergencyContactBadge(e.target.value)
+                    }
+                    placeholder="Contoh: 24 JAM"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                {/* Urutan */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Urutan Tampilan
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={emergencyContactSortOrder}
+                    onChange={(e) =>
+                      setEmergencyContactSortOrder(
+                        Number(e.target.value)
+                      )
+                    }
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                {/* Icon */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Icon
+                  </label>
+                  <select
+                    value={emergencyContactIcon}
+                    onChange={(e) =>
+                      setEmergencyContactIcon(e.target.value)
+                    }
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  >
+                    <option value="ShieldAlert">
+                      Shield Alert — Keamanan
+                    </option>
+                    <option value="Ambulance">
+                      Ambulance — Medis
+                    </option>
+                    <option value="Flame">
+                      Flame — Kebakaran
+                    </option>
+                    <option value="Zap">
+                      Zap — Listrik / Darurat
+                    </option>
+                    <option value="Users">
+                      Users — Warga / Umum
+                    </option>
+                  </select>
+                </div>
+
+                {/* Warna */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Warna
+                  </label>
+                  <select
+                    value={emergencyContactColor}
+                    onChange={(e) =>
+                      setEmergencyContactColor(e.target.value)
+                    }
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  >
+                    <option value="emerald">Hijau — Umum / Keamanan</option>
+                    <option value="blue">Biru — Medis</option>
+                    <option value="rose">Merah — Darurat / Kebakaran</option>
+                    <option value="amber">Kuning — Peringatan</option>
+                    <option value="slate">Abu-abu — Netral</option>
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div className="sm:col-span-2">
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={emergencyContactIsActive}
+                      onChange={(e) =>
+                        setEmergencyContactIsActive(e.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+                    />
+
+                    <span>
+                      <span className="block text-xs font-semibold text-slate-800">
+                        Tampilkan sebagai kontak aktif
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-slate-500">
+                        Kontak nonaktif tetap tersimpan di database tetapi
+                        tidak ditampilkan kepada warga.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+              <button
+                type="button"
+                onClick={() => setIsEmergencyContactModalOpen(false)}
+                disabled={isSavingEmergencyContact}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                onClick={saveEmergencyContact}
+                disabled={isSavingEmergencyContact}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSavingEmergencyContact && (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                )}
+                {isSavingEmergencyContact
+                  ? 'Menyimpan...'
+                  : editingEmergencyContact
+                    ? 'Simpan Perubahan'
+                    : 'Tambah Kontak'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tambah / Edit Komunitas */}
       {isCommunityGroupModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
           <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
