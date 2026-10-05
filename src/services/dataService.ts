@@ -42,6 +42,7 @@ import {
   OrganizationMember,
   CommunityGroup,
   CommunityAchievement,
+  EmergencyContact,
 } from '../types/portal';
 import {
   INITIAL_ANNOUNCEMENTS,
@@ -358,6 +359,21 @@ updateOrganizationMember(
 ): Promise<OrganizationMember>;
 
 deleteOrganizationMember(id: string): Promise<void>;
+  // Emergency Contacts / Kontak Darurat
+  fetchEmergencyContacts(): Promise<EmergencyContact[]>;
+
+  addEmergencyContact(
+    item: Omit<EmergencyContact, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<EmergencyContact>;
+
+  updateEmergencyContact(
+    id: string,
+    item: Partial<
+      Omit<EmergencyContact, 'id' | 'createdAt' | 'updatedAt'>
+    >
+  ): Promise<EmergencyContact>;
+
+  deleteEmergencyContact(id: string): Promise<void>;
 
   // Community / Komunitas
   fetchCommunityGroups(): Promise<CommunityGroup[]>;
@@ -668,6 +684,165 @@ export const DataService: IPortalDataRepository = {
 
     return members;
   },
+    // ==========================================================
+  // Emergency Contacts / Kontak Darurat
+  // ==========================================================
+
+  async fetchEmergencyContacts(): Promise<EmergencyContact[]> {
+    const { data, error } = await supabase
+      .from('emergency_contacts')
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase fetchEmergencyContacts error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal memuat kontak darurat'
+      );
+    }
+
+    return (data || []).map((item) => ({
+      id: item.id,
+      title: item.title,
+      name: item.name,
+      phone: item.phone || '',
+      description: item.description || '',
+      badge: item.badge || '',
+      icon: item.icon || 'ShieldAlert',
+      color: item.color || 'bg-slate-50 text-slate-900 border-slate-200',
+      sortOrder: item.sort_order ?? 0,
+      isActive: item.is_active ?? true,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    }));
+  },
+
+  async addEmergencyContact(
+    item: Omit<EmergencyContact, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<EmergencyContact> {
+    const { data, error } = await supabase
+      .from('emergency_contacts')
+      .insert({
+        title: item.title,
+        name: item.name,
+        phone: item.phone,
+        description: item.description,
+        badge: item.badge,
+        icon: item.icon,
+        color: item.color,
+        sort_order: item.sortOrder,
+        is_active: item.isActive,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase addEmergencyContact error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal menambahkan kontak darurat'
+      );
+    }
+
+    return {
+      id: data.id,
+      title: data.title,
+      name: data.name,
+      phone: data.phone || '',
+      description: data.description || '',
+      badge: data.badge || '',
+      icon: data.icon || 'ShieldAlert',
+      color: data.color || 'bg-slate-50 text-slate-900 border-slate-200',
+      sortOrder: data.sort_order ?? 0,
+      isActive: data.is_active ?? true,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  },
+
+  async updateEmergencyContact(
+    id: string,
+    item: Partial<
+      Omit<EmergencyContact, 'id' | 'createdAt' | 'updatedAt'>
+    >
+  ): Promise<EmergencyContact> {
+    const payload: Record<string, unknown> = {};
+
+    if (item.title !== undefined) payload.title = item.title;
+    if (item.name !== undefined) payload.name = item.name;
+    if (item.phone !== undefined) payload.phone = item.phone;
+    if (item.description !== undefined) {
+      payload.description = item.description;
+    }
+    if (item.badge !== undefined) payload.badge = item.badge;
+    if (item.icon !== undefined) payload.icon = item.icon;
+    if (item.color !== undefined) payload.color = item.color;
+    if (item.sortOrder !== undefined) {
+      payload.sort_order = item.sortOrder;
+    }
+    if (item.isActive !== undefined) {
+      payload.is_active = item.isActive;
+    }
+
+    const { data, error } = await supabase
+      .from('emergency_contacts')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase updateEmergencyContact error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal memperbarui kontak darurat'
+      );
+    }
+
+    return {
+      id: data.id,
+      title: data.title,
+      name: data.name,
+      phone: data.phone || '',
+      description: data.description || '',
+      badge: data.badge || '',
+      icon: data.icon || 'ShieldAlert',
+      color: data.color || 'bg-slate-50 text-slate-900 border-slate-200',
+      sortOrder: data.sort_order ?? 0,
+      isActive: data.is_active ?? true,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  },
+
+  async deleteEmergencyContact(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('emergency_contacts')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase deleteEmergencyContact error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal menghapus kontak darurat'
+      );
+    }
+  },
+
     // ==========================================================
   // Community / Komunitas
   // ==========================================================

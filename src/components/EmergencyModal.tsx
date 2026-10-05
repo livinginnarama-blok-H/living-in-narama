@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react';
+import { DataService } from '../services/dataService';
+import type { EmergencyContact } from '../types/portal';
 import React from 'react';
 import {
   X,
@@ -13,67 +16,73 @@ interface EmergencyModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
+const getEmergencyIcon = (iconName: string) => {
+  switch (iconName) {
+    case 'Ambulance':
+      return Ambulance;
+    case 'Flame':
+      return Flame;
+    case 'Zap':
+      return Zap;
+    case 'Users':
+      return Users;
+    case 'ShieldAlert':
+    default:
+      return ShieldAlert;
+  }
+};
 export const EmergencyModal: React.FC<EmergencyModalProps> = ({
+
   isOpen,
   onClose,
 }) => {
+  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
+
+    const loadContacts = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const data = await DataService.fetchEmergencyContacts();
+
+        if (!cancelled) {
+          setContacts(data.filter((contact) => contact.isActive));
+        }
+      } catch (err) {
+        console.error('[EmergencyModal] Gagal memuat kontak darurat:', err);
+
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'Gagal memuat kontak darurat'
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadContacts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
   if (!isOpen) {
     return null;
   }
 
-  const contacts = [
-    {
-      title: 'Keamanan Lingkungan',
-      name: 'Pos Keamanan / Satpam Blok H',
-      phone: '',
-      desc: 'Untuk kebutuhan keamanan dan kondisi darurat di lingkungan Blok H',
-      icon: ShieldAlert,
-      badge: 'Internal',
-      color:
-        'bg-emerald-50 text-emerald-900 border-emerald-200',
-    },
-    {
-      title: 'Pengurus Blok H',
-      name: 'Koordinator / Pengurus Paguyuban',
-      phone: '',
-      desc: 'Untuk koordinasi terkait warga, lingkungan, dan kondisi darurat',
-      icon: Users,
-      badge: 'Internal',
-      color:
-        'bg-blue-50 text-blue-900 border-blue-200',
-    },
-    {
-      title: 'Layanan Medis',
-      name: 'Layanan Darurat Medis',
-      phone: '119',
-      desc: 'Untuk keadaan darurat medis dan kebutuhan pertolongan kesehatan',
-      icon: Ambulance,
-      badge: 'Publik',
-      color:
-        'bg-rose-50 text-rose-900 border-rose-200',
-    },
-    {
-      title: 'Pemadam Kebakaran',
-      name: 'Layanan Pemadam Kebakaran',
-      phone: '113',
-      desc: 'Untuk keadaan kebakaran dan kebutuhan evakuasi darurat',
-      icon: Flame,
-      badge: 'Publik',
-      color:
-        'bg-amber-50 text-amber-900 border-amber-200',
-    },
-    {
-      title: 'Gangguan Listrik',
-      name: 'Layanan Gangguan PLN',
-      phone: '123',
-      desc: 'Untuk laporan gangguan listrik dan jaringan kelistrikan',
-      icon: Zap,
-      badge: 'Publik',
-      color:
-        'bg-slate-50 text-slate-900 border-slate-200',
-    },
-  ];
+  
 
   return (
     <div
@@ -132,7 +141,7 @@ export const EmergencyModal: React.FC<EmergencyModalProps> = ({
         {/* Daftar Kontak */}
         <div className="space-y-3 overflow-y-auto p-4 sm:p-5">
           {contacts.map((contact) => {
-            const Icon = contact.icon;
+            const Icon = getEmergencyIcon(contact.icon);
             const isAvailable = contact.phone !== '';
 
             return (
@@ -164,7 +173,7 @@ export const EmergencyModal: React.FC<EmergencyModalProps> = ({
                     </p>
 
                     <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                      {contact.desc}
+                      {contact.description}
                     </p>
                   </div>
                 </div>

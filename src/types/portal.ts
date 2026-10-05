@@ -75,6 +75,26 @@ export interface Household {
   createdAt?: string;
   updatedAt?: string;
 }
+/**
+ * ==========================================================
+ * 2. EMERGENCY CONTACT
+ * ==========================================================
+ */
+
+export interface EmergencyContact {
+  id: string;
+  title: string;
+  name: string;
+  phone: string;
+  description: string;
+  badge: string;
+  icon: string;
+  color: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 /**
  * ==========================================================
