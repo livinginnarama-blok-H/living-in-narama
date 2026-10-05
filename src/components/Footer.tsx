@@ -162,8 +162,7 @@ export const Footer: React.FC<FooterProps> = ({
           <p>© {new Date().getFullYear()} Paguyuban Warga Griya Adika Narama Blok H. Hak Cipta Dilindungi.</p>
           <div className="flex items-center gap-4">
             <span>Kawasan Sejuk Pegunungan</span>
-            <span aria-hidden="true">·</span>
-            </div>
+           </div>
         </div>
       </div>
     </footer>
