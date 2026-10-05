@@ -79,12 +79,14 @@ export const PengumumanView: React.FC<PengumumanViewProps> = ({ isAdmin }) => {
     return matchesCategory && matchesSearch;
   });
 
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim() || !newContent.trim()) return;
+  const handleAddSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!newTitle.trim() || !newContent.trim()) return;
 
+  try {
     const today = new Date().toISOString().split('T')[0];
-    const created = DataService.addAnnouncement({
+
+    await DataService.addAnnouncement({
       title: newTitle.trim(),
       category: newCategory,
       author: newAuthor.trim(),
@@ -93,23 +95,46 @@ export const PengumumanView: React.FC<PengumumanViewProps> = ({ isAdmin }) => {
       isPinned: newIsPinned,
     });
 
-    setAnnouncements(DataService.getAnnouncements());
+    const data = await DataService.fetchAnnouncements();
+    setAnnouncements(data);
+
     setIsAddModalOpen(false);
     setNewTitle('');
     setNewContent('');
     setNewIsPinned(false);
-  };
+  } catch (error) {
+    console.error('[PengumumanView] Gagal menambah pengumuman:', error);
+    window.alert(
+      error instanceof Error
+        ? error.message
+        : 'Gagal menambahkan pengumuman.'
+    );
+  }
+};
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm('Hapus pengumuman ini?')) {
-      DataService.deleteAnnouncement(id);
-      setAnnouncements(DataService.getAnnouncements());
-      if (selectedAnnouncement?.id === id) {
-        setSelectedAnnouncement(null);
-      }
+const handleDelete = async (id: string, e: React.MouseEvent) => {
+  e.stopPropagation();
+
+  if (!window.confirm('Hapus pengumuman ini?')) return;
+
+  try {
+    await DataService.deleteAnnouncement(id);
+
+    const data = await DataService.fetchAnnouncements();
+    setAnnouncements(data);
+
+    if (selectedAnnouncement?.id === id) {
+      setSelectedAnnouncement(null);
     }
-  };
+  } catch (error) {
+    console.error('[PengumumanView] Gagal menghapus pengumuman:', error);
+    window.alert(
+      error instanceof Error
+        ? error.message
+        : 'Gagal menghapus pengumuman.'
+    );
+  }
+};
 
   const handleShare = (item: Announcement, e: React.MouseEvent) => {
     e.stopPropagation();
