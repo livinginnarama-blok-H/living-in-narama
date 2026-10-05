@@ -242,7 +242,7 @@ const upcomingAgendas = agendas
               className="px-4 py-2.5 text-xs sm:text-sm font-medium rounded-xl bg-rose-950/60 hover:bg-rose-900 text-rose-200 border border-rose-800/50 transition-colors flex items-center gap-2"
             >
               <PhoneCall className="w-4 h-4 text-rose-300" />
-              <span>Kontak Satpam</span>
+              <span>Kontak Darurat</span>
             </button>
           </div>
         </div>
