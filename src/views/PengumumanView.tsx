@@ -79,62 +79,62 @@ export const PengumumanView: React.FC<PengumumanViewProps> = ({ isAdmin }) => {
     return matchesCategory && matchesSearch;
   });
 
-  const handleAddSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!newTitle.trim() || !newContent.trim()) return;
+    const handleAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim() || !newContent.trim()) return;
 
-  try {
-    const today = new Date().toISOString().split('T')[0];
+    try {
+      const today = new Date().toISOString().split('T')[0];
 
-    await DataService.addAnnouncement({
-      title: newTitle.trim(),
-      category: newCategory,
-      author: newAuthor.trim(),
-      content: newContent.trim(),
-      date: today,
-      isPinned: newIsPinned,
-    });
+      await DataService.addAnnouncement({
+        title: newTitle.trim(),
+        category: newCategory,
+        author: newAuthor.trim(),
+        content: newContent.trim(),
+        date: today,
+        isPinned: newIsPinned,
+      });
 
-    const data = await DataService.fetchAnnouncements();
-    setAnnouncements(data);
+      const data = await DataService.fetchAnnouncements();
+      setAnnouncements(data);
 
-    setIsAddModalOpen(false);
-    setNewTitle('');
-    setNewContent('');
-    setNewIsPinned(false);
-  } catch (error) {
-    console.error('[PengumumanView] Gagal menambah pengumuman:', error);
-    window.alert(
-      error instanceof Error
-        ? error.message
-        : 'Gagal menambahkan pengumuman.'
-    );
-  }
-};
-
-const handleDelete = async (id: string, e: React.MouseEvent) => {
-  e.stopPropagation();
-
-  if (!window.confirm('Hapus pengumuman ini?')) return;
-
-  try {
-    await DataService.deleteAnnouncement(id);
-
-    const data = await DataService.fetchAnnouncements();
-    setAnnouncements(data);
-
-    if (selectedAnnouncement?.id === id) {
-      setSelectedAnnouncement(null);
+      setIsAddModalOpen(false);
+      setNewTitle('');
+      setNewContent('');
+      setNewIsPinned(false);
+    } catch (error) {
+      console.error('[PengumumanView] Gagal menambah pengumuman:', error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Gagal menambahkan pengumuman.'
+      );
     }
-  } catch (error) {
-    console.error('[PengumumanView] Gagal menghapus pengumuman:', error);
-    window.alert(
-      error instanceof Error
-        ? error.message
-        : 'Gagal menghapus pengumuman.'
-    );
-  }
-};
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!window.confirm('Hapus pengumuman ini?')) return;
+
+    try {
+      await DataService.deleteAnnouncement(id);
+
+      const data = await DataService.fetchAnnouncements();
+      setAnnouncements(data);
+
+      if (selectedAnnouncement?.id === id) {
+        setSelectedAnnouncement(null);
+      }
+    } catch (error) {
+      console.error('[PengumumanView] Gagal menghapus pengumuman:', error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Gagal menghapus pengumuman.'
+      );
+    }
+  };
 
   const handleShare = (item: Announcement, e: React.MouseEvent) => {
     e.stopPropagation();
