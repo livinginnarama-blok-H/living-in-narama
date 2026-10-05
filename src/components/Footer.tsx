@@ -163,8 +163,7 @@ export const Footer: React.FC<FooterProps> = ({
           <div className="flex items-center gap-4">
             <span>Kawasan Sejuk Pegunungan</span>
             <span aria-hidden="true">·</span>
-            <span>Arsitektur Edge Cloudflare Ready</span>
-          </div>
+            </div>
         </div>
       </div>
     </footer>
