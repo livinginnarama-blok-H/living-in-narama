@@ -31,7 +31,7 @@ export default function App() {
       return 'pengumuman';
     case '/agenda':
       return 'agenda';
-    case '/program-kerja':
+    case '/komunitas':
       return 'komunitas';
     case '/keuangan':
       return 'keuangan';
