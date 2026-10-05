@@ -2,6 +2,107 @@ import { supabase } from '../lib/supabase'
 import { AdminUser, AuthSession } from '../types/portal'
 
 type AuthListener = (session: AuthSession) => void
+const IDLE_TIMEOUT_MS = 60 * 60 * 1000
+const ACTIVITY_STORAGE_KEY = 'narama_admin_last_activity'
+const ACTIVITY_WRITE_THROTTLE_MS = 5_000
+
+let idleCheckTimer: ReturnType<typeof setInterval> | null = null
+let activityTrackingStarted = false
+let lastActivityWrite = 0
+
+function getLastActivity(): number {
+  const stored = localStorage.getItem(ACTIVITY_STORAGE_KEY)
+  const timestamp = stored ? Number(stored) : 0
+
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function recordActivity() {
+  const now = Date.now()
+
+  // Jangan menulis localStorage setiap event mousemove.
+  if (now - lastActivityWrite < ACTIVITY_WRITE_THROTTLE_MS) {
+    return
+  }
+
+  lastActivityWrite = now
+  localStorage.setItem(ACTIVITY_STORAGE_KEY, String(now))
+}
+
+async function checkIdleTimeout() {
+  if (!currentSession.isAuthenticated) {
+    return
+  }
+
+  const lastActivity = getLastActivity()
+
+  if (!lastActivity) {
+    recordActivity()
+    return
+  }
+
+  if (Date.now() - lastActivity >= IDLE_TIMEOUT_MS) {
+    console.info('[AuthService] Session berakhir karena idle 1 jam.')
+    stopIdleTracking()
+    await supabase.auth.signOut()
+  }
+}
+
+function startIdleTracking() {
+  if (typeof window === 'undefined' || activityTrackingStarted) {
+    return
+  }
+
+  activityTrackingStarted = true
+  recordActivity()
+
+  const activityEvents = [
+    'click',
+    'keydown',
+    'mousemove',
+    'scroll',
+    'touchstart',
+  ] as const
+
+  activityEvents.forEach((eventName) => {
+    window.addEventListener(eventName, recordActivity, {
+      passive: true,
+    })
+  })
+
+  window.addEventListener('visibilitychange', recordActivity)
+
+  idleCheckTimer = setInterval(() => {
+    void checkIdleTimeout()
+  }, 30_000)
+}
+
+function stopIdleTracking() {
+  if (typeof window === 'undefined' || !activityTrackingStarted) {
+    return
+  }
+
+  const activityEvents = [
+    'click',
+    'keydown',
+    'mousemove',
+    'scroll',
+    'touchstart',
+  ] as const
+
+  activityEvents.forEach((eventName) => {
+    window.removeEventListener(eventName, recordActivity)
+  })
+
+  window.removeEventListener('visibilitychange', recordActivity)
+
+  if (idleCheckTimer) {
+    clearInterval(idleCheckTimer)
+    idleCheckTimer = null
+  }
+
+  activityTrackingStarted = false
+}
 
 const listeners: Set<AuthListener> = new Set()
 
@@ -73,12 +174,16 @@ export const AuthService = {
    * Membaca session Supabase saat aplikasi pertama kali dibuka.
    */
   async initialize(): Promise<AuthSession> {
-    const session = await buildSession()
+  const session = await buildSession()
 
-    notifyListeners(session)
+  notifyListeners(session)
 
-    return session
-  },
+  if (session.isAuthenticated) {
+    startIdleTracking()
+  }
+
+  return session
+},
 
   /**
    * Mendapatkan session yang sedang aktif.
@@ -130,6 +235,7 @@ export const AuthService = {
     }
 
     notifyListeners(session)
+    startIdleTracking()
 
     return {
       success: true,
@@ -141,7 +247,9 @@ export const AuthService = {
    * Logout dari Supabase.
    */
   async logout(): Promise<void> {
-    const { error } = await supabase.auth.signOut()
+  stopIdleTracking()
+
+  const { error } = await supabase.auth.signOut()
 
     if (error) {
       console.error('Supabase logout error:', error)
@@ -182,9 +290,16 @@ export const AuthService = {
         event === 'USER_UPDATED'
       ) {
         setTimeout(async () => {
-          const session = await buildSession()
-          notifyListeners(session)
-        }, 0)
+        const session = await buildSession()
+
+        if (session.isAuthenticated) {
+          startIdleTracking()
+        } else {
+          stopIdleTracking()
+        }
+
+        notifyListeners(session)
+      }, 0)
       }
     })
 
