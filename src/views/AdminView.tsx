@@ -8,6 +8,7 @@ import {
   CommunityGroup,
   CommunityGroupCategory,
   CommunityAchievement,
+  EmergencyContact,
 } from '../types/portal';
 import { DataService } from '../services/dataService';
 import { AuthService } from '../services/authService';
@@ -35,6 +36,7 @@ import {
   UserX,
   Trash2,
   UserPlus,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface AdminViewProps {
@@ -58,7 +60,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   // Admin sub-tabs: Laporan Warga vs Cloudflare D1 Console vs Pengaturan Data
   const [adminTab, setAdminTab] = useState<
-  'laporan' | 'warga' | 'pengurus' | 'komunitas' | 'cloudflare' | 'data'
+  | 'laporan'
+  | 'warga'
+  | 'pengurus'
+  | 'komunitas'
+  | 'kontak'
+  | 'cloudflare'
+  | 'data'
 >('laporan');
   const [reports, setReports] = useState<CitizenReport[]>(() => DataService.getReports());
   const [households, setHouseholds] = useState<Household[]>([]);
@@ -87,7 +95,12 @@ const [editingCommunityAchievement, setEditingCommunityAchievement] =
   useState<CommunityAchievement | null>(null);
 const [isSavingCommunityAchievement, setIsSavingCommunityAchievement] =
   useState(false);
-
+const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
+const [isLoadingEmergencyContacts, setIsLoadingEmergencyContacts] = useState(false);
+const [emergencyContactError, setEmergencyContactError] = useState<string | null>(null);
+const [isEmergencyContactModalOpen, setIsEmergencyContactModalOpen] = useState(false);
+const [editingEmergencyContact, setEditingEmergencyContact] = useState<EmergencyContact | null>(null);
+const [isSavingEmergencyContact, setIsSavingEmergencyContact] = useState(false);
 const [communityAchievementTitle, setCommunityAchievementTitle] =
   useState('');
 const [communityAchievementRecipient, setCommunityAchievementRecipient] =
@@ -338,6 +351,33 @@ const loadCommunityData = async () => {
 
 useEffect(() => {
   loadCommunityData();
+}, []);
+const loadEmergencyContacts = async () => {
+  try {
+    setIsLoadingEmergencyContacts(true);
+    setEmergencyContactError(null);
+
+    const data = await DataService.fetchEmergencyContacts();
+
+    setEmergencyContacts(data);
+  } catch (err) {
+    console.error(
+      '[AdminView] Gagal memuat kontak darurat:',
+      err
+    );
+
+    setEmergencyContactError(
+      err instanceof Error
+        ? err.message
+        : 'Gagal memuat kontak darurat.'
+    );
+  } finally {
+    setIsLoadingEmergencyContacts(false);
+  }
+};
+
+useEffect(() => {
+  loadEmergencyContacts();
 }, []);
 const openCommunityGroupModal = (
   group: CommunityGroup | null = null
@@ -1208,6 +1248,17 @@ const kosongCount = activeHouseholds.filter(
 >
   <Users className="w-3.5 h-3.5" />
   <span>Komunitas ({communityGroups.length + communityAchievements.length})</span>
+</button>
+<button
+  onClick={() => setAdminTab('kontak')}
+  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
+    adminTab === 'kontak'
+      ? 'bg-emerald-800 text-white'
+      : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
+  }`}
+>
+  <ShieldAlert className="w-3.5 h-3.5" />
+  <span>Kontak Darurat</span>
 </button>
 {adminTab === 'pengurus' && (
   <div className="space-y-4">
