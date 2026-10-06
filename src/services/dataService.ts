@@ -476,13 +476,16 @@ fetchIPLRecap(period?: string): Promise<IPLRecap>;
   fetchReports(): Promise<CitizenReport[]>;
   submitReport(report: Omit<CitizenReport, 'id' | 'date' | 'status' | 'createdAt' | 'reportNumber'>): Promise<CitizenReport>;
   updateReportStatus(
+    
     id: string,
     status: CitizenReport['status'],
     note?: string
   ): Promise<void>;
+  deleteReport(id: string): Promise<void>;
   getReportStatusHistory(
     reportId: string
   ): Promise<CitizenReportStatusHistory[]>;
+
 
  // Ronda Schedules
   getRondaSchedules(): RondaSchedule[];
@@ -3441,7 +3444,31 @@ return savedReport;
 
   emitDataChange();
 },
+  async deleteReport(id: string): Promise<void> {
+    if (DATA_CONFIG.mode === 'cloudflare_worker') {
+      throw new Error(
+        'Penghapusan laporan belum didukung pada mode Cloudflare Worker.'
+      );
+    }
 
+    const { error } = await supabase
+      .from('citizen_reports')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error(
+        '[DataService] Supabase deleteReport error:',
+        error
+      );
+
+      throw new Error(
+        error.message || 'Gagal menghapus laporan'
+      );
+    }
+
+    emitDataChange();
+  },
 async getReportStatusHistory(
   reportId: string
 ): Promise<CitizenReportStatusHistory[]> {

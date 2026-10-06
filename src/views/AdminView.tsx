@@ -747,6 +747,51 @@ const deleteEmergencyContact = async (
     );
   }
 };
+  const handleDeleteReport = async (report: CitizenReport) => {
+    const reportLabel = report.reportNumber || report.id;
+
+    const confirmed = window.confirm(
+      `Hapus laporan ${reportLabel}?\n\n` +
+        `Judul: ${report.title}\n` +
+        `Pelapor: ${report.residentName}\n` +
+        `Rumah: ${report.houseNumber}\n\n` +
+        `Laporan dan seluruh riwayat statusnya akan dihapus permanen. ` +
+        `Tindakan ini tidak dapat dibatalkan.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await DataService.deleteReport(report.id);
+
+      setReports((prev) =>
+        prev.filter((item) => item.id !== report.id)
+      );
+
+      setReportHistories((prev) => {
+        const next = { ...prev };
+        delete next[report.id];
+        return next;
+      });
+
+      if (expandedReportHistory === report.id) {
+        setExpandedReportHistory(null);
+      }
+    } catch (err) {
+      console.error(
+        '[AdminView] Gagal menghapus laporan:',
+        err
+      );
+
+      window.alert(
+        err instanceof Error
+          ? err.message
+          : 'Gagal menghapus laporan.'
+      );
+    }
+  };
   const handleToggleReportHistory = async (reportId: string) => {
     if (expandedReportHistory === reportId) {
       setExpandedReportHistory(null);
@@ -1473,18 +1518,26 @@ const kosongCount = activeHouseholds.filter(
       </div>
     )}
 
-    <div className="pt-2">
-      <button
-        type="button"
-        onClick={() => handleToggleReportHistory(rep.id)}
-        className="text-xs font-semibold text-emerald-800 hover:text-emerald-900 hover:underline"
-      >
-        {loadingReportHistory === rep.id
-          ? 'Memuat riwayat...'
-          : expandedReportHistory === rep.id
-            ? 'Tutup Riwayat'
-            : 'Lihat Riwayat'}
-      </button>
+    <div className="pt-2 flex items-center gap-4">
+  <button
+    type="button"
+    onClick={() => handleToggleReportHistory(rep.id)}
+    className="text-xs font-semibold text-emerald-800 hover:text-emerald-900 hover:underline"
+  >
+    {loadingReportHistory === rep.id
+      ? 'Memuat riwayat...'
+      : expandedReportHistory === rep.id
+        ? 'Tutup Riwayat'
+        : 'Lihat Riwayat'}
+  </button>
+
+  <button
+    type="button"
+    onClick={() => handleDeleteReport(rep)}
+    className="text-xs font-semibold text-red-700 hover:text-red-800 hover:underline"
+  >
+    Hapus Laporan
+  </button>
 
       {expandedReportHistory === rep.id && (
         <div className="mt-3 border-l-2 border-emerald-200 pl-4 space-y-3">
