@@ -719,12 +719,26 @@ export interface CitizenReportStatusHistory {
   note?: string;
   createdAt: string;
 }
+
 /**
  * ==========================================================
  * 12. RONDA / SISKAMLING
  * ==========================================================
  */
+export interface PublicReportStatus {
+  reportNumber: string;
+  date: string;
+  category: CitizenReport['category'];
+  title: string;
+  status: CitizenReport['status'];
+  updatedAt?: string;
+}
 
+export interface PublicReportHistoryItem {
+  status: CitizenReport['status'];
+  note?: string;
+  createdAt: string;
+}
 export interface RondaSchedule {
   id: string;
   day: string;

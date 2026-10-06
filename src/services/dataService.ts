@@ -33,6 +33,8 @@ import {
   Documentation,
   CitizenReport,
   CitizenReportStatusHistory,
+  PublicReportStatus,
+  PublicReportHistoryItem,
   RondaSchedule,
   ApiResponse,
   Household,
@@ -486,6 +488,13 @@ fetchIPLRecap(period?: string): Promise<IPLRecap>;
     reportId: string
   ): Promise<CitizenReportStatusHistory[]>;
 
+  getPublicReportStatus(
+    reportNumber: string
+  ): Promise<PublicReportStatus | null>;
+
+  getPublicReportHistory(
+    reportNumber: string
+  ): Promise<PublicReportHistoryItem[]>;
 
  // Ronda Schedules
   getRondaSchedules(): RondaSchedule[];
@@ -3497,6 +3506,88 @@ async getReportStatusHistory(
   }));
 },
 
+async getPublicReportStatus(
+  reportNumber: string
+): Promise<PublicReportStatus | null> {
+  const normalizedReportNumber = reportNumber.trim();
+
+  if (!normalizedReportNumber) {
+    return null;
+  }
+
+  const { data, error } = await supabase.rpc(
+    'get_public_report_status',
+    {
+      p_report_number: normalizedReportNumber,
+    }
+  );
+
+  if (error) {
+    console.error(
+      '[DataService] Supabase getPublicReportStatus error:',
+      error
+    );
+
+    throw new Error(
+      error.message || 'Gagal memeriksa status laporan'
+    );
+  }
+
+  const item = Array.isArray(data) ? data[0] : data;
+
+  if (!item) {
+    return null;
+  }
+
+  return {
+    reportNumber: item.report_number,
+    date: item.date,
+    category: item.category,
+    title: item.title,
+    status: item.status,
+    updatedAt: item.updated_at || undefined,
+  };
+},
+
+async getPublicReportHistory(
+  reportNumber: string
+): Promise<PublicReportHistoryItem[]> {
+  const normalizedReportNumber = reportNumber.trim();
+
+  if (!normalizedReportNumber) {
+    return [];
+  }
+
+  const { data, error } = await supabase.rpc(
+    'get_public_report_history',
+    {
+      p_report_number: normalizedReportNumber,
+    }
+  );
+
+  if (error) {
+    console.error(
+      '[DataService] Supabase getPublicReportHistory error:',
+      error
+    );
+
+    throw new Error(
+      error.message || 'Gagal memuat riwayat status laporan'
+    );
+  }
+
+  const historyRows = (data ?? []) as Array<{
+    status: CitizenReport['status'];
+    note: string | null;
+    created_at: string;
+  }>;
+
+  return historyRows.map((item) => ({
+    status: item.status,
+    note: item.note || undefined,
+    createdAt: item.created_at,
+  }));
+},
 // ==========================================
 // 9. RONDA / SISKAMLING SCHEDULE
 // ==========================================

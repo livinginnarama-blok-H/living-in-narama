@@ -10,6 +10,7 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { Footer } from './components/Footer';
 import { EmergencyModal } from './components/EmergencyModal';
 import { LaporWargaModal } from './components/LaporWargaModal';
+import { CekLaporanModal } from './components/CekLaporanModal';
 import { AuthService } from './services/authService';
 
 // Views
@@ -61,6 +62,7 @@ const [activeTab, setActiveTab] = useState<TabKey>(getTabFromPath());
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isCheckReportOpen, setIsCheckReportOpen] = useState(false);
 
   // Subscribe to centralized auth session changes (no direct storage access in view)
   useEffect(() => {
@@ -133,6 +135,7 @@ setActiveTab('beranda');
             onSelectTab={handleSelectTab}
             onOpenEmergency={() => setIsEmergencyOpen(true)}
             onOpenReport={() => setIsReportOpen(true)}
+            onOpenCheckReport={() => setIsCheckReportOpen(true)}
           />
         )}
 
@@ -184,6 +187,10 @@ setActiveTab('beranda');
       <LaporWargaModal
         isOpen={isReportOpen}
         onClose={() => setIsReportOpen(false)}
+      />
+      <CekLaporanModal
+        isOpen={isCheckReportOpen}
+        onClose={() => setIsCheckReportOpen(false)}
       />
     </div>
   );

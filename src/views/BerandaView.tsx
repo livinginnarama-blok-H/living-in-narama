@@ -18,18 +18,21 @@ import {
   Clock,
   Sparkles,
   Mail,
+  SearchCheck,
 } from 'lucide-react';
 
 interface BerandaViewProps {
   onSelectTab: (tab: TabKey) => void;
   onOpenEmergency: () => void;
   onOpenReport: () => void;
+  onOpenCheckReport: () => void;
 }
 
 export const BerandaView: React.FC<BerandaViewProps> = ({
   onSelectTab,
   onOpenEmergency,
   onOpenReport,
+  onOpenCheckReport,
 }) => {
   const [announcements, setAnnouncements] = useState<Announcement[]>(() => DataService.getAnnouncements());
   const [agendas, setAgendas] = useState<EventAgenda[]>(() => DataService.getAgendas());
@@ -238,7 +241,15 @@ const upcomingAgendas = agendas
               <MessageSquare className="w-4 h-4 text-emerald-300" />
               <span>Lapor / Saran Warga</span>
             </button>
-
+             
+             <button
+              onClick={onOpenCheckReport}
+              className="px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-emerald-500/40 transition-colors flex items-center gap-2"
+            >
+              <SearchCheck className="w-4 h-4 text-emerald-300" />
+              <span>Cek Status Laporan</span>
+            </button>
+            
             <button
               onClick={onOpenEmergency}
               className="px-4 py-2.5 text-xs sm:text-sm font-medium rounded-xl bg-rose-950/60 hover:bg-rose-900 text-rose-200 border border-rose-800/50 transition-colors flex items-center gap-2"
@@ -246,6 +257,7 @@ const upcomingAgendas = agendas
               <PhoneCall className="w-4 h-4 text-rose-300" />
               <span>Kontak Darurat</span>
             </button>
+             
           </div>
         </div>
 
