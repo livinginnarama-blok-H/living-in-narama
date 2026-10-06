@@ -70,6 +70,40 @@ export const AdminView: React.FC<AdminViewProps> = ({
   | 'data'
 >('laporan');
   const [reports, setReports] = useState<CitizenReport[]>(() => DataService.getReports());
+  const [reportSearch, setReportSearch] = useState('');
+  const [reportStatusFilter, setReportStatusFilter] = useState<
+    'semua' | CitizenReport['status']
+  >('semua');
+  const [reportCategoryFilter, setReportCategoryFilter] = useState<
+    'semua' | CitizenReport['category']
+  >('semua');
+
+  const filteredReports = reports.filter((report) => {
+    const search = reportSearch.trim().toLowerCase();
+
+    const matchesSearch =
+      !search ||
+      report.reportNumber.toLowerCase().includes(search) ||
+      report.residentName.toLowerCase().includes(search) ||
+      report.title.toLowerCase().includes(search);
+
+    const matchesStatus =
+      reportStatusFilter === 'semua' ||
+      report.status === reportStatusFilter;
+
+    const matchesCategory =
+      reportCategoryFilter === 'semua' ||
+      report.category === reportCategoryFilter;
+
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
+
+  const reportSummary = {
+    total: reports.length,
+    menunggu: reports.filter((report) => report.status === 'menunggu').length,
+    diproses: reports.filter((report) => report.status === 'diproses').length,
+    selesai: reports.filter((report) => report.status === 'selesai').length,
+  };
   const [reportHistories, setReportHistories] = useState<
   Record<string, CitizenReportStatusHistory[]>
   >({});
@@ -1427,15 +1461,104 @@ const kosongCount = activeHouseholds.filter(
       {/* Tab 1: Aspirasi & Laporan Warga */}
       {adminTab === 'laporan' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900">Daftar Keluhan & Masukan Masuk</h3>
-            <span className="text-xs text-slate-500">
-              Total {reports.length} laporan dari warga Blok H
-            </span>
-          </div>
+          <div className="space-y-4">
+  <div className="flex flex-col gap-3">
+    <div className="flex items-center justify-between gap-3">
+      <h3 className="text-sm font-bold text-slate-900">
+        Daftar Keluhan & Masukan Masuk
+      </h3>
 
-          <div className="space-y-3">
-            {reports.map((rep) => (
+      <span className="text-xs text-slate-500">
+        Menampilkan {filteredReports.length} dari {reportSummary.total} laporan
+      </span>
+    </div>
+
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <div className="text-[11px] text-slate-500">Total</div>
+        <div className="text-lg font-bold text-slate-900">
+          {reportSummary.total}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+        <div className="text-[11px] text-amber-700">Menunggu</div>
+        <div className="text-lg font-bold text-amber-800">
+          {reportSummary.menunggu}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
+        <div className="text-[11px] text-blue-700">Diproses</div>
+        <div className="text-lg font-bold text-blue-800">
+          {reportSummary.diproses}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+        <div className="text-[11px] text-emerald-700">Selesai</div>
+        <div className="text-lg font-bold text-emerald-800">
+          {reportSummary.selesai}
+        </div>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-2">
+      <div className="relative">
+        <input
+          type="search"
+          value={reportSearch}
+          onChange={(e) => setReportSearch(e.target.value)}
+          placeholder="Cari nomor laporan, nama warga, atau judul..."
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+        />
+      </div>
+
+      <select
+        value={reportStatusFilter}
+        onChange={(e) =>
+          setReportStatusFilter(
+            e.target.value as 'semua' | CitizenReport['status']
+          )
+        }
+        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+      >
+        <option value="semua">Semua Status</option>
+        <option value="menunggu">Menunggu</option>
+        <option value="diproses">Diproses</option>
+        <option value="selesai">Selesai</option>
+      </select>
+
+      <select
+        value={reportCategoryFilter}
+        onChange={(e) =>
+          setReportCategoryFilter(
+            e.target.value as 'semua' | CitizenReport['category']
+          )
+        }
+        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+      >
+        <option value="semua">Semua Kategori</option>
+        <option value="fasilitas">Fasilitas</option>
+        <option value="keamanan">Keamanan</option>
+        <option value="kebersihan">Kebersihan</option>
+        <option value="saran">Saran</option>
+      </select>
+    </div>
+  </div>
+
+  <div className="space-y-3">
+  {filteredReports.length === 0 ? (
+    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+      <p className="text-sm font-semibold text-slate-700">
+        Tidak ada laporan yang sesuai
+      </p>
+      <p className="mt-1 text-xs text-slate-500">
+        Coba ubah kata kunci atau filter status/kategori.
+      </p>
+    </div>
+  ) : 
+    filteredReports.map((rep) => (
   <div
     key={rep.id}
     className="bg-white rounded-xl border border-slate-200 p-5 space-y-3 shadow-xs"
@@ -1583,6 +1706,7 @@ const kosongCount = activeHouseholds.filter(
   </div>
 ))}
           </div>
+        </div>
         </div>
       )}
       <button

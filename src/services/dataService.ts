@@ -3245,7 +3245,7 @@ return transactions;
 
   return (data ?? []).map((item) => ({
     id: item.id,
-    reportNumber: item.report_number,
+    reportNumber: item.report_number ?? '',
     date: item.date,
     residentName: item.resident_name,
     houseNumber: item.house_number,
