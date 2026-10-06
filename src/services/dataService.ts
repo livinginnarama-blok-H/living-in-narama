@@ -3330,28 +3330,14 @@ const newReport: CitizenReport = {
         description: newReport.description,
         status: newReport.status,
         created_at: newReport.createdAt,
-      })
-      .select('*')
-      .single();
-
+      });
+  
     if (error) {
       console.error('[DataService] Supabase submitReport error:', error);
       throw new Error(error.message || 'Gagal mengirim laporan warga');
     }
 
-    const savedReport: CitizenReport = {
-      id: data.id,
-      reportNumber: data.report_number,
-      date: data.date,
-      residentName: data.resident_name,
-      houseNumber: data.house_number,
-      phone: data.phone,
-      category: data.category,
-      title: data.title,
-      description: data.description,
-      status: data.status,
-      createdAt: data.created_at,
-    };
+  const savedReport: CitizenReport = newReport;
 
    const { error: historyError } = await supabase
   .from('citizen_report_status_history')
