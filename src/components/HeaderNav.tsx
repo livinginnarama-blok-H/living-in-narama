@@ -30,7 +30,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
           >
             <div className="w-11 h-11 shrink-0 flex items-center justify-center">
               <img
-                src="/logo-gan.png"
+                src="/logo-h.png"
                 alt="Griya Adika Narama"
                 className="w-full h-full object-contain"
                />
