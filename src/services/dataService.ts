@@ -477,6 +477,7 @@ fetchIPLRecap(period?: string): Promise<IPLRecap>;
   getReports(): CitizenReport[];
   fetchReports(): Promise<CitizenReport[]>;
   submitReport(report: Omit<CitizenReport, 'id' | 'date' | 'status' | 'createdAt' | 'reportNumber'>): Promise<CitizenReport>;
+  
   updateReportStatus(
     
     id: string,
@@ -3269,6 +3270,14 @@ return transactions;
   async submitReport(
     report: Omit<CitizenReport, 'id' | 'date' | 'status' | 'createdAt' | 'reportNumber'>
   ): Promise<CitizenReport> {
+        const { data: authData } = await supabase.auth.getSession();
+
+    console.log('[REPORT DEBUG] submitReport session:', {
+      authenticated: !!authData.session,
+      userId: authData.session?.user?.id,
+      email: authData.session?.user?.email,
+      accessToken: authData.session?.access_token ? 'ADA' : 'TIDAK ADA',
+    });
     const today = new Date().toISOString().split('T')[0];
 
     const reportDate = today.replace(/-/g, '');
