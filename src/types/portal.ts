@@ -684,7 +684,7 @@ export interface AuthSession {
 
 export interface CitizenReport {
   id: string;
-
+  reportNumber: string;
   date: string;
 
   residentName: string;
@@ -712,7 +712,13 @@ export interface CitizenReport {
 
   updatedAt?: string;
 }
-
+export interface CitizenReportStatusHistory {
+  id: string;
+  reportId: string;
+  status: CitizenReport['status'];
+  note?: string;
+  createdAt: string;
+}
 /**
  * ==========================================================
  * 12. RONDA / SISKAMLING

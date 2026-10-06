@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   TabKey,
   CitizenReport,
+  CitizenReportStatusHistory,
   Household,
   OccupancyStatus,
   OrganizationMember,
@@ -69,6 +70,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
   | 'data'
 >('laporan');
   const [reports, setReports] = useState<CitizenReport[]>(() => DataService.getReports());
+  const [reportHistories, setReportHistories] = useState<
+  Record<string, CitizenReportStatusHistory[]>
+  >({});
+  const [expandedReportHistory, setExpandedReportHistory] = useState<string | null>(
+    null
+  );
+  const [loadingReportHistory, setLoadingReportHistory] = useState<string | null>(
+    null
+  );
   const [households, setHouseholds] = useState<Household[]>([]);
   const [householdSearch, setHouseholdSearch] = useState('');
   const [isHouseholdModalOpen, setIsHouseholdModalOpen] = useState(false);
@@ -694,17 +704,87 @@ const deleteEmergencyContact = async (
 
   const handleUpdateReportStatus = async (
   id: string,
+  currentStatus: CitizenReport['status'],
   newStatus: CitizenReport['status']
 ) => {
-  try {
-    await DataService.updateReportStatus(id, newStatus);
+  const note = window.prompt(
+    'Catatan tindak lanjut (opsional):',
+    ''
+  );
 
+  if (note === null) {
+    // Admin menekan Cancel → batalkan perubahan status
     const data = await DataService.fetchReports();
     setReports(data);
+    return;
+  }
+
+  try {
+    await DataService.updateReportStatus(
+      id,
+      newStatus,
+      note.trim() || undefined
+    );
+
+        const data = await DataService.fetchReports();
+    setReports(data);
+
+    setReportHistories((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   } catch (err) {
-    console.error('[AdminView] Gagal memperbarui status laporan:', err);
+    console.error(
+      '[AdminView] Gagal memperbarui status laporan:',
+      err
+    );
+
+    window.alert(
+      err instanceof Error
+        ? err.message
+        : 'Gagal memperbarui status laporan.'
+    );
   }
 };
+  const handleToggleReportHistory = async (reportId: string) => {
+    if (expandedReportHistory === reportId) {
+      setExpandedReportHistory(null);
+      return;
+    }
+
+    setExpandedReportHistory(reportId);
+
+    if (reportHistories[reportId]) {
+      return;
+    }
+
+    setLoadingReportHistory(reportId);
+
+    try {
+      const history = await DataService.getReportStatusHistory(reportId);
+
+      setReportHistories((prev) => ({
+        ...prev,
+        [reportId]: history,
+      }));
+    } catch (err) {
+      console.error(
+        '[AdminView] Gagal memuat riwayat laporan:',
+        err
+      );
+
+      window.alert(
+        err instanceof Error
+          ? err.message
+          : 'Gagal memuat riwayat laporan.'
+      );
+
+      setExpandedReportHistory(null);
+    } finally {
+      setLoadingReportHistory(null);
+    }
+  };
   const resetHouseholdForm = () => {
   setHouseNumber('');
   setResidentName('');
@@ -1311,58 +1391,144 @@ const kosongCount = activeHouseholds.filter(
 
           <div className="space-y-3">
             {reports.map((rep) => (
-              <div
-                key={rep.id}
-                className="bg-white rounded-xl border border-slate-200 p-5 space-y-3 shadow-xs"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5 text-xs text-slate-500">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900">{rep.residentName}</span>
-                    <span className="font-mono text-emerald-800 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded">
-                      Rumah {rep.houseNumber}
-                    </span>
-                    <span aria-hidden="true">·</span>
-                    <span>{rep.date}</span>
-                    <span aria-hidden="true">·</span>
-                    <span className="uppercase text-[11px] font-semibold text-slate-700">
-                      {rep.category}
-                    </span>
-                  </div>
+  <div
+    key={rep.id}
+    className="bg-white rounded-xl border border-slate-200 p-5 space-y-3 shadow-xs"
+  >
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5 text-xs text-slate-500">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-mono text-emerald-800 font-bold bg-emerald-50 px-2 py-1 rounded-md">
+          {rep.reportNumber || 'Nomor belum tersedia'}
+        </span>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-slate-500">Status:</span>
-                    <select
-                      value={rep.status}
-                      onChange={(e) => handleUpdateReportStatus(rep.id, e.target.value as any)}
-                      className="text-xs font-semibold rounded-md border border-slate-300 py-1 px-2 bg-slate-50 text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-700"
-                    >
-                      <option value="menunggu">Menunggu Tindak Lanjut</option>
-                      <option value="diproses">Sedang Diproses Satpam/Seksi</option>
-                      <option value="selesai">Selesai Ditangani</option>
-                    </select>
-                  </div>
+        <span aria-hidden="true">·</span>
+
+        <span className="font-bold text-slate-900">
+          {rep.residentName}
+        </span>
+
+        <span className="font-mono text-emerald-800 font-semibold bg-slate-50 px-1.5 py-0.5 rounded">
+          Rumah {rep.houseNumber}
+        </span>
+
+        <span aria-hidden="true">·</span>
+
+        <span>{rep.date}</span>
+
+        <span aria-hidden="true">·</span>
+
+        <span className="uppercase text-[11px] font-semibold text-slate-700">
+          {rep.category}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] text-slate-500">Status:</span>
+
+        <select
+          value={rep.status}
+          onChange={(e) =>
+            handleUpdateReportStatus(
+              rep.id,
+              rep.status,
+              e.target.value as CitizenReport['status']
+            )
+          }
+          className="text-xs font-semibold rounded-md border border-slate-300 py-1 px-2 bg-slate-50 text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+        >
+          <option value="menunggu">
+            Menunggu Tindak Lanjut
+          </option>
+          <option value="diproses">
+            Sedang Diproses Satpam/Seksi
+          </option>
+          <option value="selesai">
+            Selesai Ditangani
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div className="space-y-1">
+      <h4 className="text-sm font-bold text-slate-900">
+        {rep.title}
+      </h4>
+
+      <p className="text-xs text-slate-700 leading-relaxed">
+        {rep.description}
+      </p>
+    </div>
+
+    {rep.phone && rep.phone !== '-' && (
+      <div className="text-[11px] text-slate-500 pt-1">
+        Kontak Pelapor:{' '}
+        <a
+          href={`https://wa.me/${rep.phone.replace(/[^0-9]/g, '')}`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-emerald-800 font-semibold hover:underline"
+        >
+          {rep.phone} (Hubungi via WA)
+        </a>
+      </div>
+    )}
+
+    <div className="pt-2">
+      <button
+        type="button"
+        onClick={() => handleToggleReportHistory(rep.id)}
+        className="text-xs font-semibold text-emerald-800 hover:text-emerald-900 hover:underline"
+      >
+        {loadingReportHistory === rep.id
+          ? 'Memuat riwayat...'
+          : expandedReportHistory === rep.id
+            ? 'Tutup Riwayat'
+            : 'Lihat Riwayat'}
+      </button>
+
+      {expandedReportHistory === rep.id && (
+        <div className="mt-3 border-l-2 border-emerald-200 pl-4 space-y-3">
+          {(reportHistories[rep.id] ?? []).length === 0 ? (
+            <p className="text-xs text-slate-500">
+              Belum ada riwayat status.
+            </p>
+          ) : (
+            reportHistories[rep.id].map((history) => (
+              <div key={history.id} className="relative">
+                <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-emerald-600" />
+
+                <div>
+                  <p className="text-xs font-semibold text-slate-800">
+                    {history.status === 'menunggu'
+                      ? 'Menunggu Tindak Lanjut'
+                      : history.status === 'diproses'
+                        ? 'Sedang Diproses'
+                        : 'Selesai Ditangani'}
+                  </p>
+
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {new Date(
+                      history.createdAt
+                    ).toLocaleString('id-ID', {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    })}
+                  </p>
+
+                  {history.note && (
+                    <p className="text-[11px] text-slate-600 mt-1">
+                      Catatan: {history.note}
+                    </p>
+                  )}
                 </div>
-
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-slate-900">{rep.title}</h4>
-                  <p className="text-xs text-slate-700 leading-relaxed">{rep.description}</p>
-                </div>
-
-                {rep.phone && rep.phone !== '-' && (
-                  <div className="text-[11px] text-slate-500 pt-1">
-                    Kontak Pelapor:{' '}
-                    <a
-                      href={`https://wa.me/${rep.phone.replace(/[^0-9]/g, '')}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-emerald-800 font-semibold hover:underline"
-                    >
-                      {rep.phone} (Hubungi via WA)
-                    </a>
-                  </div>
-                )}
               </div>
-            ))}
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+))}
           </div>
         </div>
       )}

@@ -21,6 +21,7 @@ export const LaporWargaModal: React.FC<LaporWargaModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedReport, setSubmittedReport] = useState<CitizenReport | null>(null);
 
   if (!isOpen) return null;
 
@@ -32,7 +33,7 @@ export const LaporWargaModal: React.FC<LaporWargaModalProps> = ({
     if (!residentName || !houseNumber || !title || !description) return;
 
     try {
-      await DataService.submitReport({
+    const savedReport = await DataService.submitReport({
         residentName,
         houseNumber,
         phone: phone || '-',
@@ -41,21 +42,13 @@ export const LaporWargaModal: React.FC<LaporWargaModalProps> = ({
         description,
       });
 
+      setSubmittedReport(savedReport);
       setIsSubmitted(true);
 
       if (onSuccessSubmitted) {
         onSuccessSubmitted();
       }
-
-      setTimeout(() => {
-        setIsSubmitted(false);
-        setResidentName('');
-        setHouseNumber('');
-        setPhone('');
-        setTitle('');
-        setDescription('');
-        onClose();
-      }, 1800);
+      
     } catch (error) {
       console.error('[LaporWargaModal] Gagal mengirim laporan:', error);
 
@@ -86,14 +79,53 @@ export const LaporWargaModal: React.FC<LaporWargaModalProps> = ({
         </div>
 
         {isSubmitted ? (
-          <div className="p-8 text-center space-y-3">
-            <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto animate-bounce" />
-            <h4 className="text-lg font-bold text-slate-900">Laporan Berhasil Terkirim!</h4>
-            <p className="text-sm text-slate-600">
+        <div className="p-8 text-center space-y-5">
+          <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto animate-bounce" />
+
+          <div>
+            <h4 className="text-lg font-bold text-slate-900">
+              Laporan Berhasil Terkirim!
+            </h4>
+
+            <p className="text-sm text-slate-600 mt-1">
               Terima kasih atas kepedulian Anda. Pengurus Paguyuban Blok H akan segera menindaklanjuti laporan ini.
             </p>
           </div>
-        ) : (
+
+          {submittedReport?.reportNumber && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-5 py-4">
+              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">
+                Nomor Laporan
+              </p>
+
+              <p className="text-xl font-bold text-emerald-900 font-mono mt-1">
+                {submittedReport.reportNumber}
+              </p>
+
+              <p className="text-[11px] text-emerald-700 mt-2">
+                Simpan nomor ini untuk referensi laporan Anda.
+              </p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsSubmitted(false);
+              setResidentName('');
+              setHouseNumber('');
+              setPhone('');
+              setTitle('');
+              setDescription('');
+              setSubmittedReport(null);
+              onClose();
+            }}
+            className="w-full px-4 py-2.5 bg-slate-800 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 transition-colors"
+          >
+            Tutup
+          </button>
+        </div>
+      ) : (
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
             <p className="text-xs text-slate-500">
               Sampaikan keluhan fasilitas lingkungan, masukan keamanan, atau usulan kegiatan untuk kemajuan bersama Blok H.

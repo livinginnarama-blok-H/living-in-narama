@@ -14,3 +14,6 @@ export const supabase = createClient(
     },
   }
 )
+supabase.auth.getSession().then(({ data }) => {
+  console.log('[Supabase Debug] Session:', data.session);
+});

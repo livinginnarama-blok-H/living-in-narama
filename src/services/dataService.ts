@@ -32,6 +32,7 @@ import {
   FinancialPeriodFilter,
   Documentation,
   CitizenReport,
+  CitizenReportStatusHistory,
   RondaSchedule,
   ApiResponse,
   Household,
@@ -473,8 +474,15 @@ fetchIPLRecap(period?: string): Promise<IPLRecap>;
   // Citizen Reports
   getReports(): CitizenReport[];
   fetchReports(): Promise<CitizenReport[]>;
-  submitReport(report: Omit<CitizenReport, 'id' | 'date' | 'status' | 'createdAt'>): Promise<CitizenReport>;
-  updateReportStatus(id: string, status: CitizenReport['status']): Promise<void>;
+  submitReport(report: Omit<CitizenReport, 'id' | 'date' | 'status' | 'createdAt' | 'reportNumber'>): Promise<CitizenReport>;
+  updateReportStatus(
+    id: string,
+    status: CitizenReport['status'],
+    note?: string
+  ): Promise<void>;
+  getReportStatusHistory(
+    reportId: string
+  ): Promise<CitizenReportStatusHistory[]>;
 
  // Ronda Schedules
   getRondaSchedules(): RondaSchedule[];
@@ -546,7 +554,13 @@ export const DataService: IPortalDataRepository = {
     id: generateSafeId('ann'),
     createdAt: new Date().toISOString(),
   };
+  const { data: authData } = await supabase.auth.getSession();
 
+  console.log('[REPORT DEBUG] session:', authData.session);
+  console.log(
+    '[REPORT DEBUG] access token:',
+    authData.session?.access_token ? 'ADA' : 'TIDAK ADA'
+  );
   const { data, error } = await supabase
     .from('announcements')
     .insert({
@@ -3228,6 +3242,7 @@ return transactions;
 
   return (data ?? []).map((item) => ({
     id: item.id,
+    reportNumber: item.report_number,
     date: item.date,
     residentName: item.resident_name,
     houseNumber: item.house_number,
@@ -3240,17 +3255,23 @@ return transactions;
   }));
 },
   async submitReport(
-    report: Omit<CitizenReport, 'id' | 'date' | 'status' | 'createdAt'>
+    report: Omit<CitizenReport, 'id' | 'date' | 'status' | 'createdAt' | 'reportNumber'>
   ): Promise<CitizenReport> {
     const today = new Date().toISOString().split('T')[0];
 
-    const newReport: CitizenReport = {
-      ...report,
-      id: generateSafeId('rep'),
-      date: today,
-      status: 'menunggu',
-      createdAt: new Date().toISOString(),
-    };
+    const reportDate = today.replace(/-/g, '');
+const reportNumber = `LAP-H-${reportDate}-${Date.now()
+  .toString()
+  .slice(-4)}`;
+
+const newReport: CitizenReport = {
+  ...report,
+  id: generateSafeId('rep'),
+  reportNumber,
+  date: today,
+  status: 'menunggu',
+  createdAt: new Date().toISOString(),
+};
 
     if (DATA_CONFIG.mode === 'cloudflare_worker') {
       try {
@@ -3279,6 +3300,7 @@ return transactions;
       .insert({
         id: newReport.id,
         date: newReport.date,
+        report_number: newReport.reportNumber,
         resident_name: newReport.residentName,
         house_number: newReport.houseNumber,
         phone: newReport.phone,
@@ -3298,6 +3320,7 @@ return transactions;
 
     const savedReport: CitizenReport = {
       id: data.id,
+      reportNumber: data.report_number,
       date: data.date,
       residentName: data.resident_name,
       houseNumber: data.house_number,
@@ -3309,20 +3332,41 @@ return transactions;
       createdAt: data.created_at,
     };
 
-    emitDataChange();
-    return savedReport;
+   const { error: historyError } = await supabase
+  .from('citizen_report_status_history')
+  .insert({
+    report_id: savedReport.id,
+    status: savedReport.status,
+    note: 'Laporan diterima',
+    created_at: savedReport.createdAt ?? new Date().toISOString(),
+  });
+
+if (historyError) {
+  console.error(
+    '[DataService] Supabase insert initial report status history error:',
+    historyError
+  );
+
+  throw new Error(
+    historyError.message || 'Gagal menyimpan riwayat awal laporan'
+  );
+}
+
+emitDataChange();
+return savedReport;
   },
 
   async updateReportStatus(
   id: string,
-  status: CitizenReport['status']
+  status: CitizenReport['status'],
+  note?: string
 ): Promise<void> {
   if (DATA_CONFIG.mode === 'cloudflare_worker') {
     try {
       const json = await safeFetch<ApiResponse<void>>(`/reports/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, note }),
       });
 
       if (!json.success) {
@@ -3339,11 +3383,29 @@ return transactions;
     }
   }
 
+  const now = new Date().toISOString();
+
+  const { data: currentReport, error: fetchError } = await supabase
+    .from('citizen_reports')
+    .select('status')
+    .eq('id', id)
+    .single();
+
+  if (fetchError) {
+    console.error(
+      '[DataService] Supabase fetch current report status error:',
+      fetchError
+    );
+    throw new Error(
+      fetchError.message || 'Gagal membaca status laporan saat ini'
+    );
+  }
+
   const { error } = await supabase
     .from('citizen_reports')
     .update({
       status,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     })
     .eq('id', id);
 
@@ -3355,7 +3417,57 @@ return transactions;
     throw new Error(error.message || 'Gagal memperbarui status laporan');
   }
 
+  // Catat riwayat hanya jika status benar-benar berubah.
+  if (currentReport.status !== status) {
+    const { error: historyError } = await supabase
+      .from('citizen_report_status_history')
+      .insert({
+        report_id: id,
+        status,
+        note: note?.trim() || null,
+        created_at: now,
+      });
+
+    if (historyError) {
+      console.error(
+        '[DataService] Supabase insert report status history error:',
+        historyError
+      );
+      throw new Error(
+        historyError.message || 'Gagal menyimpan riwayat status laporan'
+      );
+    }
+  }
+
   emitDataChange();
+},
+
+async getReportStatusHistory(
+  reportId: string
+): Promise<CitizenReportStatusHistory[]> {
+  const { data, error } = await supabase
+    .from('citizen_report_status_history')
+    .select('*')
+    .eq('report_id', reportId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error(
+      '[DataService] Supabase getReportStatusHistory error:',
+      error
+    );
+    throw new Error(
+      error.message || 'Gagal memuat riwayat status laporan'
+    );
+  }
+
+  return (data ?? []).map((item) => ({
+    id: item.id,
+    reportId: item.report_id,
+    status: item.status,
+    note: item.note || undefined,
+    createdAt: item.created_at,
+  }));
 },
 
 // ==========================================
