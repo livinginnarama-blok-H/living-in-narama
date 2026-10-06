@@ -215,8 +215,7 @@ const upcomingAgendas = agendas
           </div>
 
           <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white text-balance leading-tight sm:leading-tight">
-            Portal Warga <br className="hidden sm:inline" />
-            Griya Adika Narama · Blok H
+             Living In Narama · Blok H
           </h1>
 
           <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed max-w-2xl text-pretty">
