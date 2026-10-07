@@ -18,7 +18,7 @@ interface DokumentasiViewProps {
 }
 
 export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => {
-    const [items, setItems] = useState<DocumentationItem[]>(
+  const [items, setItems] = useState<DocumentationItem[]>(
     () => DataService.getDocumentation()
   );
   useEffect(() => {
@@ -76,7 +76,9 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
   const [editDescription, setEditDescription] = useState('');
   const [editPhotographer, setEditPhotographer] = useState('');
   const [editImageFiles, setEditImageFiles] = useState<File[]>([]);
+  const [editCoverImageUrl, setEditCoverImageUrl] = useState('');
   const [editRemovedImageUrls, setEditRemovedImageUrls] = useState<string[]>([]);
+  const [editNewCoverIndex, setEditNewCoverIndex] = useState<number | null>(null);
 
   // Status
   const [isSaving, setIsSaving] = useState(false);
@@ -148,6 +150,13 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
     setEditPhotographer(item.photographer);
     setEditImageFiles([]);
     setEditRemovedImageUrls([]);
+    setEditCoverImageUrl(
+      item.image ||
+      (item.images && item.images.length > 0
+        ? item.images[0]
+        : '')
+    );
+    setEditNewCoverIndex(null);
     setErrorMessage('');
     setSelectedPhoto(null);
     setIsEditModalOpen(true);
@@ -172,7 +181,9 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
           photographer: editPhotographer,
         },
         editImageFiles.length > 0 ? editImageFiles : undefined,
-        editRemovedImageUrls
+        editRemovedImageUrls,
+        editCoverImageUrl,
+        editNewCoverIndex
       );
 
       setItems((current) =>
@@ -184,6 +195,9 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
       setIsEditModalOpen(false);
       setEditingItem(null);
       setEditImageFiles([]);
+      setEditRemovedImageUrls([]);
+      setEditCoverImageUrl('');
+      setEditNewCoverIndex(null);
     } catch (error) {
       console.error('Gagal memperbarui dokumentasi:', error);
 
@@ -230,7 +244,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
     }
   };
 
-    return (
+  return (
     <div className="space-y-6">
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
@@ -322,18 +336,17 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
-              activeCategory === cat.id
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${activeCategory === cat.id
                 ? 'bg-emerald-800 text-white font-semibold shadow-xs'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-            }`}
+              }`}
           >
             {cat.label}
           </button>
         ))}
       </div>
 
-          {/* Photos Grid */}
+      {/* Photos Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredItems.map((item) => (
           <article
@@ -446,71 +459,71 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
             </div>
 
             {/* Photo Gallery */}
-<div className="relative bg-black flex items-center justify-center overflow-hidden">
-  {(() => {
-    const images =
-      selectedPhoto.images && selectedPhoto.images.length > 0
-        ? selectedPhoto.images
-        : [selectedPhoto.image];
+            <div className="relative bg-black flex items-center justify-center overflow-hidden">
+              {(() => {
+                const images =
+                  selectedPhoto.images && selectedPhoto.images.length > 0
+                    ? selectedPhoto.images
+                    : [selectedPhoto.image];
 
-    const currentIndex = Math.min(
-      selectedImageIndex,
-      images.length - 1
-    );
+                const currentIndex = Math.min(
+                  selectedImageIndex,
+                  images.length - 1
+                );
 
-    return (
-      <>
-        <img
-          src={images[currentIndex]}
-          alt={`${selectedPhoto.title} - Foto ${currentIndex + 1}`}
-          referrerPolicy="no-referrer"
-          className="max-h-[60vh] w-full object-contain mx-auto"
-        />
+                return (
+                  <>
+                    <img
+                      src={images[currentIndex]}
+                      alt={`${selectedPhoto.title} - Foto ${currentIndex + 1}`}
+                      referrerPolicy="no-referrer"
+                      className="max-h-[60vh] w-full object-contain mx-auto"
+                    />
 
-        {images.length > 1 && (
-          <>
-            {/* Previous */}
-            <button
-              type="button"
-              onClick={() =>
-                setSelectedImageIndex(
-                  currentIndex === 0
-                    ? images.length - 1
-                    : currentIndex - 1
-                )
-              }
-              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2.5 text-white hover:bg-black/80 transition"
-              aria-label="Foto sebelumnya"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+                    {images.length > 1 && (
+                      <>
+                        {/* Previous */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedImageIndex(
+                              currentIndex === 0
+                                ? images.length - 1
+                                : currentIndex - 1
+                            )
+                          }
+                          className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2.5 text-white hover:bg-black/80 transition"
+                          aria-label="Foto sebelumnya"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
 
-            {/* Next */}
-            <button
-              type="button"
-              onClick={() =>
-                setSelectedImageIndex(
-                  currentIndex === images.length - 1
-                    ? 0
-                    : currentIndex + 1
-                )
-              }
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2.5 text-white hover:bg-black/80 transition"
-              aria-label="Foto berikutnya"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+                        {/* Next */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedImageIndex(
+                              currentIndex === images.length - 1
+                                ? 0
+                                : currentIndex + 1
+                            )
+                          }
+                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2.5 text-white hover:bg-black/80 transition"
+                          aria-label="Foto berikutnya"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
 
-            {/* Counter */}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-[11px] font-medium text-white">
-              {currentIndex + 1} / {images.length}
+                        {/* Counter */}
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-[11px] font-medium text-white">
+                          {currentIndex + 1} / {images.length}
+                        </div>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </div>
-          </>
-        )}
-      </>
-    );
-  })()}
-</div>
 
             {/* Caption */}
             <div className="p-5 space-y-2 bg-white">
@@ -699,11 +712,10 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                         return (
                           <div
                             key={`${imageUrl}-${index}`}
-                            className={`relative overflow-hidden rounded-xl border ${
-                              isRemoved
+                            className={`relative overflow-hidden rounded-xl border ${isRemoved
                                 ? 'border-red-300 opacity-40'
                                 : 'border-slate-200'
-                            }`}
+                              }`}
                           >
                             <img
                               src={imageUrl}
@@ -712,12 +724,24 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                               referrerPolicy="no-referrer"
                             />
 
-                            {index === 0 && !isRemoved && (
+                            {editCoverImageUrl === imageUrl && !isRemoved && (
                               <span className="absolute left-1.5 top-1.5 rounded-md bg-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                                 Cover
                               </span>
                             )}
-
+                            {!isRemoved && editCoverImageUrl !== imageUrl && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditCoverImageUrl(imageUrl);
+                                  setErrorMessage('');
+                                }}
+                                className="absolute bottom-1.5 left-1.5 rounded-md bg-black/65 px-2 py-1 text-[10px] font-semibold text-white shadow hover:bg-black/80 transition"
+                                title="Jadikan cover"
+                              >
+                                ⭐ Cover
+                              </button>
+                            )}
                             {isRemoved ? (
                               <div className="absolute inset-0 flex items-center justify-center bg-red-900/30">
                                 <span className="rounded-md bg-red-600 px-2 py-1 text-[10px] font-semibold text-white">
@@ -782,16 +806,53 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                       {editImageFiles.length} foto baru dipilih:
                     </p>
 
-                    {editImageFiles.map((file, index) => (
-                      <p
-                        key={`${file.name}-${index}`}
-                        className="text-xs text-slate-500"
-                      >
-                        {index + 1}. {file.name}
-                      </p>
-                    ))}
-                </div>
-              )}
+                    {editImageFiles.map((file, index) => {
+                      const previewUrl = URL.createObjectURL(file);
+                      const isCover = editNewCoverIndex === index;
+
+                      return (
+                        <div
+                          key={`${file.name}-${index}`}
+                          className={`relative overflow-hidden rounded-xl border ${isCover
+                              ? 'border-emerald-500 ring-2 ring-emerald-100'
+                              : 'border-slate-200'
+                            }`}
+                        >
+                          <img
+                            src={previewUrl}
+                            alt={`Foto baru ${index + 1}`}
+                            className="h-24 w-full object-cover"
+                          />
+
+                          {isCover && (
+                            <span className="absolute left-1.5 top-1.5 rounded-md bg-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                              Cover
+                            </span>
+                          )}
+
+                          {!isCover && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditNewCoverIndex(index);
+                                setEditCoverImageUrl('');
+                                setErrorMessage('');
+                              }}
+                              className="absolute bottom-1.5 left-1.5 rounded-md bg-black/65 px-2 py-1 text-[10px] font-semibold text-white shadow hover:bg-black/80 transition"
+                              title="Jadikan cover"
+                            >
+                              ⭐ Cover
+                            </button>
+                          )}
+
+                          <div className="absolute bottom-1.5 right-1.5 max-w-[70%] rounded-md bg-black/65 px-1.5 py-1 text-[9px] text-white truncate">
+                            {file.name}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Description */}
@@ -840,7 +901,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
           </div>
         </div>
       )}
-   {/* Admin Add Photo Modal */}
+      {/* Admin Add Photo Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
           <div className="fixed inset-0" onClick={() => setIsAddModalOpen(false)} />
@@ -848,27 +909,27 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-base font-bold text-slate-900">Tambah Dokumentasi Baru</h3>
               <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Foto Dokumentasi
-              </label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Foto Dokumentasi
+                </label>
 
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                required
-                onChange={(e) => {
-                  const files = Array.from(e.target.files || []);
-                  setNewImageFiles(files);
-                  setErrorMessage('');
-                }}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700"
-              />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  required
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setNewImageFiles(files);
+                    setErrorMessage('');
+                  }}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                />
 
-              <p className="text-[11px] text-slate-500 mt-1">
-                Pilih satu atau beberapa foto. Format JPG, PNG, atau WebP. Maksimal 50 MB per foto.
-              </p>
-            </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Pilih satu atau beberapa foto. Format JPG, PNG, atau WebP. Maksimal 50 MB per foto.
+                </p>
+              </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-700"

@@ -470,7 +470,9 @@ fetchIPLRecap(period?: string): Promise<IPLRecap>;
   id: string,
   item: Partial<Omit<Documentation, 'id' | 'createdAt'>>,
   imageFiles?: File[],
-  removedImageUrls?: string[]
+  removedImageUrls?: string[],
+  coverImageUrl?: string,
+  newCoverIndex?: number | null
 ): Promise<Documentation>;
   deleteDocumentation(id: string): Promise<void>;
 
@@ -3088,11 +3090,13 @@ return transactions;
     return documentation;
   },
 
-   async updateDocumentation(
+  async updateDocumentation(
   id: string,
   item: Partial<Omit<Documentation, 'id' | 'createdAt'>>,
   imageFiles?: File[],
-  removedImageUrls?: string[]
+  removedImageUrls?: string[],
+  coverImageUrl?: string,
+  newCoverIndex?: number | null
 ): Promise<Documentation> {
   // =========================================================
   // Ambil data utama dokumentasi
@@ -3226,10 +3230,22 @@ return transactions;
     );
   }
 
+    // =========================================================
+  // Tentukan Cover utama
   // =========================================================
-  // Cover utama = foto pertama
-  // =========================================================
-  const imageUrl = finalImages[0];
+  const newCoverImageUrl =
+    newCoverIndex !== null &&
+    newCoverIndex !== undefined &&
+    uploadedImages[newCoverIndex]
+      ? uploadedImages[newCoverIndex].imageUrl
+      : '';
+
+  const imageUrl =
+    newCoverImageUrl ||
+    (coverImageUrl &&
+    finalImages.includes(coverImageUrl)
+      ? coverImageUrl
+      : finalImages[0]);
 
   // =========================================================
   // Update metadata utama
