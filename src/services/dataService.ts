@@ -3088,147 +3088,153 @@ return transactions;
   },
 
     async updateDocumentation(
-  id: string,
-  item: Partial<Omit<Documentation, 'id' | 'createdAt'>>,
-  imageFiles?: File[]
-): Promise<Documentation> {
-  // Ambil data lama dari database
-  const { data: existing, error: fetchError } = await supabase
-    .from('documentation')
-    .select('*')
-    .eq('id', id)
-    .single();
+    id: string,
+    item: Partial<Omit<Documentation, 'id' | 'createdAt'>>,
+    imageFiles?: File[]
+  ): Promise<Documentation> {
+    // =========================================================
+    // Ambil data utama dokumentasi
+    // =========================================================
+    const { data: existing, error: fetchError } = await supabase
+      .from('documentation')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-  if (fetchError || !existing) {
-    throw new Error(
-      fetchError?.message || 'Dokumentasi tidak ditemukan'
-    );
-  }
+    if (fetchError || !existing) {
+      throw new Error(
+        fetchError?.message || 'Dokumentasi tidak ditemukan'
+      );
+    }
 
-  // Ambil seluruh foto lama dari gallery
-  const { data: existingPhotos, error: photosFetchError } =
-    await supabase
-      .from('documentation_photos')
-      .select('id, image_url, sort_order')
-      .eq('documentation_id', id)
-      .order('sort_order', { ascending: true });
+    // =========================================================
+    // Ambil seluruh foto gallery yang sudah ada
+    // =========================================================
+    const { data: existingPhotos, error: photosFetchError } =
+      await supabase
+        .from('documentation_photos')
+        .select('id, image_url, sort_order')
+        .eq('documentation_id', id)
+        .order('sort_order', { ascending: true });
 
-  if (photosFetchError) {
-    throw new Error(
-      photosFetchError.message || 'Gagal mengambil foto dokumentasi'
-    );
-  }
+    if (photosFetchError) {
+      throw new Error(
+        photosFetchError.message ||
+          'Gagal mengambil foto dokumentasi'
+      );
+    }
 
-  let imageUrl = existing.image_url;
+    const oldPhotos = existingPhotos || [];
 
-  const uploadedImages: {
-    imageUrl: string;
-    sortOrder: number;
-    filePath: string;
-  }[] = [];
+    // =========================================================
+    // Upload foto baru jika ada
+    // =========================================================
+    const uploadedImages: {
+      imageUrl: string;
+      sortOrder: number;
+      filePath: string;
+    }[] = [];
 
-  // =========================================================
-  // Jika admin memilih foto baru, upload seluruh foto baru
-  // =========================================================
-  if (imageFiles && imageFiles.length > 0) {
-    for (let index = 0; index < imageFiles.length; index++) {
-      const imageFile = imageFiles[index];
+    if (imageFiles && imageFiles.length > 0) {
+      const startSortOrder = oldPhotos.length;
 
-      const extension =
-        imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      for (let index = 0; index < imageFiles.length; index++) {
+        const imageFile = imageFiles[index];
 
-      const filePath = `${id}-${Date.now()}-${index}.${extension}`;
+        const extension =
+          imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
 
-      const { error: uploadError } = await supabase.storage
-        .from('documentation')
-        .upload(filePath, imageFile, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+        const filePath = `${id}-${Date.now()}-${index}.${extension}`;
 
-      if (uploadError) {
-        // Bersihkan foto baru yang sudah berhasil di-upload
-        const uploadedPaths = uploadedImages.map(
-          (photo) => photo.filePath
-        );
+        const { error: uploadError } = await supabase.storage
+          .from('documentation')
+          .upload(filePath, imageFile, {
+            cacheControl: '3600',
+            upsert: false,
+          });
 
-        if (uploadedPaths.length > 0) {
-          await supabase.storage
-            .from('documentation')
-            .remove(uploadedPaths);
+        if (uploadError) {
+          // Bersihkan foto yang sudah berhasil di-upload
+          const uploadedPaths = uploadedImages.map(
+            (photo) => photo.filePath
+          );
+
+          if (uploadedPaths.length > 0) {
+            await supabase.storage
+              .from('documentation')
+              .remove(uploadedPaths);
+          }
+
+          throw new Error(
+            uploadError.message ||
+              `Gagal mengunggah foto ke-${index + 1}`
+          );
         }
 
-        throw new Error(
-          uploadError.message ||
-            `Gagal mengunggah foto ke-${index + 1}`
-        );
+        const { data: publicUrlData } = supabase.storage
+          .from('documentation')
+          .getPublicUrl(filePath);
+
+        uploadedImages.push({
+          imageUrl: publicUrlData.publicUrl,
+          sortOrder: startSortOrder + index,
+          filePath,
+        });
+      }
+    }
+
+    // =========================================================
+    // Cover tetap menggunakan foto pertama
+    // Jika sebelumnya belum punya gallery, gunakan foto baru
+    // =========================================================
+    const existingCover = existing.image_url;
+
+    const imageUrl =
+      existingCover ||
+      uploadedImages[0]?.imageUrl ||
+      oldPhotos[0]?.image_url ||
+      '';
+
+    // =========================================================
+    // Update metadata utama
+    // =========================================================
+    const { data, error } = await supabase
+      .from('documentation')
+      .update({
+        title: item.title ?? existing.title,
+        date: item.date ?? existing.date,
+        category: item.category ?? existing.category,
+        description: item.description ?? existing.description,
+        photographer:
+          item.photographer ?? existing.photographer,
+        image_url: imageUrl,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      // Jika update metadata gagal, hapus foto baru
+      const uploadedPaths = uploadedImages.map(
+        (photo) => photo.filePath
+      );
+
+      if (uploadedPaths.length > 0) {
+        await supabase.storage
+          .from('documentation')
+          .remove(uploadedPaths);
       }
 
-      const { data: publicUrlData } = supabase.storage
-        .from('documentation')
-        .getPublicUrl(filePath);
-
-      uploadedImages.push({
-        imageUrl: publicUrlData.publicUrl,
-        sortOrder: index,
-        filePath,
-      });
-    }
-
-    // Foto pertama menjadi cover utama
-    imageUrl = uploadedImages[0].imageUrl;
-  }
-
-  // =========================================================
-  // Update metadata utama
-  // =========================================================
-  const { data, error } = await supabase
-    .from('documentation')
-    .update({
-      title: item.title ?? existing.title,
-      date: item.date ?? existing.date,
-      category: item.category ?? existing.category,
-      description: item.description ?? existing.description,
-      photographer: item.photographer ?? existing.photographer,
-      image_url: imageUrl,
-    })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    // Jika database gagal, hapus seluruh foto baru
-    const uploadedPaths = uploadedImages.map(
-      (photo) => photo.filePath
-    );
-
-    if (uploadedPaths.length > 0) {
-      await supabase.storage
-        .from('documentation')
-        .remove(uploadedPaths);
-    }
-
-    throw new Error(
-      error.message || 'Gagal memperbarui dokumentasi'
-    );
-  }
-
-  // =========================================================
-  // Jika ada foto baru:
-  // hapus relasi foto lama dan masukkan foto baru
-  // =========================================================
-  if (uploadedImages.length > 0) {
-    const { error: deletePhotosError } = await supabase
-      .from('documentation_photos')
-      .delete()
-      .eq('documentation_id', id);
-
-    if (deletePhotosError) {
-      console.error(
-        '[DataService] Gagal menghapus foto gallery lama:',
-        deletePhotosError
+      throw new Error(
+        error.message || 'Gagal memperbarui dokumentasi'
       );
-    } else {
+    }
+
+    // =========================================================
+    // Tambahkan foto baru ke gallery
+    // Foto lama TIDAK dihapus
+    // =========================================================
+    if (uploadedImages.length > 0) {
       const { error: insertPhotosError } = await supabase
         .from('documentation_photos')
         .insert(
@@ -3245,104 +3251,67 @@ return transactions;
           insertPhotosError
         );
 
-        // Jangan menggagalkan update metadata.
-        // Foto pertama tetap tersimpan sebagai image_url.
-      }
-    }
-  }
+        // Karena foto sudah ada di Storage tetapi gagal masuk DB,
+        // bersihkan file yang baru di-upload.
+        const uploadedPaths = uploadedImages.map(
+          (photo) => photo.filePath
+        );
 
-  // =========================================================
-  // Hapus file foto lama dari Storage jika foto diganti
-  // =========================================================
-  if (uploadedImages.length > 0) {
-    const oldFilePaths: string[] = [];
-
-    const oldUrls = [
-      existing.image_url,
-      ...(existingPhotos || []).map((photo) => photo.image_url),
-    ].filter(Boolean);
-
-    for (const oldImage of oldUrls) {
-      try {
-        const oldUrl = new URL(oldImage);
-        const marker =
-          '/storage/v1/object/public/documentation/';
-        const index = oldUrl.pathname.indexOf(marker);
-
-        if (index !== -1) {
-          const oldFilePath = decodeURIComponent(
-            oldUrl.pathname.substring(index + marker.length)
-          );
-
-          if (
-            oldFilePath &&
-            !oldFilePaths.includes(oldFilePath) &&
-            !uploadedImages.some(
-              (photo) => photo.filePath === oldFilePath
-            )
-          ) {
-            oldFilePaths.push(oldFilePath);
-          }
+        if (uploadedPaths.length > 0) {
+          await supabase.storage
+            .from('documentation')
+            .remove(uploadedPaths);
         }
-      } catch (error) {
-        console.error(
-          '[DataService] Gagal memproses URL foto lama:',
-          error
+
+        throw new Error(
+          insertPhotosError.message ||
+            'Gagal menyimpan foto dokumentasi baru'
         );
       }
     }
 
-    if (oldFilePaths.length > 0) {
-      const { error: storageError } =
-        await supabase.storage
-          .from('documentation')
-          .remove(oldFilePaths);
+    // =========================================================
+    // Susun kembali seluruh gallery untuk response
+    // =========================================================
+    const images = [
+      ...oldPhotos.map((photo) => photo.image_url),
+      ...uploadedImages.map((photo) => photo.imageUrl),
+    ];
 
-      if (storageError) {
-        console.error(
-          '[DataService] Gagal menghapus foto lama dari Storage:',
-          storageError
-        );
-      }
+    // Fallback untuk dokumentasi lama yang belum punya
+    // record di documentation_photos
+    if (images.length === 0 && data.image_url) {
+      images.push(data.image_url);
     }
-  }
 
-  // =========================================================
-  // Susun object dokumentasi lengkap
-  // =========================================================
-  const images =
-    uploadedImages.length > 0
-      ? uploadedImages.map((photo) => photo.imageUrl)
-      : existingPhotos && existingPhotos.length > 0
-        ? existingPhotos.map((photo) => photo.image_url)
-        : [data.image_url];
+    const documentation: Documentation = {
+      id: data.id,
+      title: data.title,
+      date: data.date,
+      category: data.category,
+      description: data.description || '',
+      image: data.image_url,
+      images,
+      photographer: data.photographer || '',
+      createdAt: data.created_at,
+    };
 
-  const documentation: Documentation = {
-    id: data.id,
-    title: data.title,
-    date: data.date,
-    category: data.category,
-    description: data.description || '',
-    image: data.image_url,
-    images,
-    photographer: data.photographer || '',
-    createdAt: data.created_at,
-  };
+    // =========================================================
+    // Update local cache
+    // =========================================================
+    const current = this.getDocumentation();
 
-  // Update local cache
-  const current = this.getDocumentation();
+    setStored<Documentation[]>(
+      STORAGE_KEYS.DOCUMENTATION,
+      current.map((doc) =>
+        doc.id === id ? documentation : doc
+      )
+    );
 
-  setStored<Documentation[]>(
-    STORAGE_KEYS.DOCUMENTATION,
-    current.map((doc) =>
-      doc.id === id ? documentation : doc
-    )
-  );
+    emitDataChange();
 
-  emitDataChange();
-
-  return documentation;
-},
+    return documentation;
+  },
     async deleteDocumentation(id: string): Promise<void> {
   // =========================================================
   // Ambil cover + seluruh foto gallery sebelum data dihapus
