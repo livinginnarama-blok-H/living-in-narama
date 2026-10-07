@@ -385,18 +385,27 @@ export default function PengurusView() {
     <section className="mx-auto max-w-7xl px-4 py-10 md:py-14">
       {/* HEADER */}
       <div className="mb-10 text-center">
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-emerald-600">
-          Griya Adika Narama · Blok H
+        <div className="mb-3 flex items-center justify-center gap-2">
+          <Users className="h-6 w-6 text-emerald-700" />
+
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+            Pengurus Blok H
+          </h1>
+        </div>
+
+        <p className="mx-auto max-w-2xl text-sm leading-relaxed text-slate-500 md:text-base">
+          Bersama mengelola, melayani, dan membangun lingkungan yang guyub.
         </p>
 
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
-          Profil & Struktur Pengurus
-        </h1>
+        <div className="mt-5 flex justify-center">
+          <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-bold text-emerald-700">
+            Periode 2026–2029
+          </span>
+        </div>
 
-        <div className="mx-auto mt-4 h-1 w-16 rounded-full bg-emerald-600" />
-
-        <p className="mt-4 text-sm font-medium text-slate-500">
-          Periode 2026–2029
+        <p className="mx-auto mt-5 max-w-2xl text-xs leading-relaxed text-slate-400 md:text-sm">
+          Kenali pengurus dan bidang yang berperan dalam menjaga kebersamaan,
+          pelayanan, dan lingkungan Blok H.
         </p>
       </div>
 
@@ -417,6 +426,7 @@ export default function PengurusView() {
           <div className="flex flex-col items-center">
             <MemberCard
               member={organization.chairman}
+              compact
             />
 
             <VerticalLine height="h-7" />
