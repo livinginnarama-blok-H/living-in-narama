@@ -9,6 +9,8 @@ import {
   ZoomIn,
   Pencil,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface DokumentasiViewProps {
@@ -43,6 +45,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
   const [activeCategory, setActiveCategory] = useState<string>('semua');
   const [selectedPhoto, setSelectedPhoto] =
     useState<DocumentationItem | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   // Admin Add Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -61,7 +64,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
     useState<DocumentationItem['category']>('kerja-bakti');
   const [newDate, setNewDate] = useState('September 2026');
   const [newDescription, setNewDescription] = useState('');
-  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [newPhotographer, setNewPhotographer] =
     useState('Warga Blok H');
 
@@ -72,7 +75,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
   const [editDate, setEditDate] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editPhotographer, setEditPhotographer] = useState('');
-  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImageFiles, setEditImageFiles] = useState<File[]>([]);
 
   // Status
   const [isSaving, setIsSaving] = useState(false);
@@ -97,8 +100,8 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
 
     if (!newTitle.trim()) return;
 
-    if (!newImageFile) {
-      setErrorMessage('Silakan pilih foto dokumentasi terlebih dahulu.');
+    if (newImageFiles.length === 0) {
+      setErrorMessage('Silakan pilih minimal satu foto dokumentasi terlebih dahulu.');
       return;
     }
 
@@ -114,13 +117,13 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
           description: newDescription,
           photographer: newPhotographer,
         },
-        newImageFile
+        newImageFiles
       );
 
       setIsAddModalOpen(false);
       setNewTitle('');
       setNewDescription('');
-      setNewImageFile(null);
+      setNewImageFiles([]);
       setNewPhotographer('Warga Blok H');
     } catch (error) {
       console.error('Gagal menyimpan dokumentasi:', error);
@@ -142,7 +145,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
     setEditDate(item.date);
     setEditDescription(item.description);
     setEditPhotographer(item.photographer);
-    setEditImageFile(null);
+    setEditImageFiles([]);
     setErrorMessage('');
     setSelectedPhoto(null);
     setIsEditModalOpen(true);
@@ -166,7 +169,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
           description: editDescription,
           photographer: editPhotographer,
         },
-        editImageFile || undefined
+        editImageFiles.length > 0 ? editImageFiles : undefined
       );
 
       setItems((current) =>
@@ -177,7 +180,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
 
       setIsEditModalOpen(false);
       setEditingItem(null);
-      setEditImageFile(null);
+      setEditImageFiles([]);
     } catch (error) {
       console.error('Gagal memperbarui dokumentasi:', error);
 
@@ -269,7 +272,10 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
             {latestItems.map((item) => (
               <article
                 key={`latest-${item.id}`}
-                onClick={() => setSelectedPhoto(item)}
+                onClick={() => {
+                  setSelectedPhoto(item);
+                  setSelectedImageIndex(0);
+                }}
                 className="group bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer hover:border-emerald-600/40 hover:shadow-md transition-all"
               >
                 <div className="relative aspect-[16/9] overflow-hidden bg-emerald-950">
@@ -329,7 +335,10 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
         {filteredItems.map((item) => (
           <article
             key={item.id}
-            onClick={() => setSelectedPhoto(item)}
+            onClick={() => {
+              setSelectedPhoto(item);
+              setSelectedImageIndex(0);
+            }}
             className="group bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer hover:border-emerald-600/40 hover:shadow-md transition-all flex flex-col justify-between"
           >
             {/* Image Container */}
@@ -433,15 +442,72 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
               </button>
             </div>
 
-            {/* Photo */}
-            <div className="relative max-h-[60vh] bg-black flex items-center justify-center overflow-hidden">
-              <img
-                src={selectedPhoto.image}
-                alt={selectedPhoto.title}
-                referrerPolicy="no-referrer"
-                className="max-h-[60vh] w-auto object-contain mx-auto"
-              />
+            {/* Photo Gallery */}
+<div className="relative bg-black flex items-center justify-center overflow-hidden">
+  {(() => {
+    const images =
+      selectedPhoto.images && selectedPhoto.images.length > 0
+        ? selectedPhoto.images
+        : [selectedPhoto.image];
+
+    const currentIndex = Math.min(
+      selectedImageIndex,
+      images.length - 1
+    );
+
+    return (
+      <>
+        <img
+          src={images[currentIndex]}
+          alt={`${selectedPhoto.title} - Foto ${currentIndex + 1}`}
+          referrerPolicy="no-referrer"
+          className="max-h-[60vh] w-full object-contain mx-auto"
+        />
+
+        {images.length > 1 && (
+          <>
+            {/* Previous */}
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedImageIndex(
+                  currentIndex === 0
+                    ? images.length - 1
+                    : currentIndex - 1
+                )
+              }
+              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2.5 text-white hover:bg-black/80 transition"
+              aria-label="Foto sebelumnya"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+
+            {/* Next */}
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedImageIndex(
+                  currentIndex === images.length - 1
+                    ? 0
+                    : currentIndex + 1
+                )
+              }
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2.5 text-white hover:bg-black/80 transition"
+              aria-label="Foto berikutnya"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+
+            {/* Counter */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-[11px] font-medium text-white">
+              {currentIndex + 1} / {images.length}
             </div>
+          </>
+        )}
+      </>
+    );
+  })()}
+</div>
 
             {/* Caption */}
             <div className="p-5 space-y-2 bg-white">
@@ -467,7 +533,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
             if (!isSaving) {
               setIsEditModalOpen(false);
               setEditingItem(null);
-              setEditImageFile(null);
+              setEditImageFiles([]);
               setErrorMessage('');
             }
           }}
@@ -493,7 +559,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                   if (!isSaving) {
                     setIsEditModalOpen(false);
                     setEditingItem(null);
-                    setEditImageFile(null);
+                    setEditImageFiles([]);
                     setErrorMessage('');
                   }
                 }}
@@ -616,23 +682,37 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
+                  multiple
                   disabled={isSaving}
                   onChange={(e) => {
-                    setEditImageFile(e.target.files?.[0] || null);
+                    const files = Array.from(e.target.files || []);
+                    setEditImageFiles(files);
+                    setErrorMessage('');
                   }}
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-700 hover:file:bg-emerald-100"
                 />
 
                 <p className="mt-1.5 text-[11px] text-slate-400">
-                  Pilih foto baru jika ingin mengganti foto saat ini. Maksimal
-                  50 MB.
+                  Pilih satu atau beberapa foto jika ingin mengganti seluruh foto
+                  dokumentasi. Format JPG, PNG, atau WebP. Maksimal 50 MB per foto.
                 </p>
 
-                {editImageFile && (
-                  <p className="mt-2 text-xs font-medium text-emerald-700">
-                    Foto baru: {editImageFile.name}
-                  </p>
-                )}
+                {editImageFiles.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs font-semibold text-emerald-700">
+                      {editImageFiles.length} foto baru dipilih:
+                    </p>
+
+                    {editImageFiles.map((file, index) => (
+                      <p
+                        key={`${file.name}-${index}`}
+                        className="text-xs text-slate-500"
+                      >
+                        {index + 1}. {file.name}
+                      </p>
+                    ))}
+                </div>
+              )}
               </div>
 
               {/* Description */}
@@ -659,7 +739,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                     if (!isSaving) {
                       setIsEditModalOpen(false);
                       setEditingItem(null);
-                      setEditImageFile(null);
+                      setEditImageFiles([]);
                       setErrorMessage('');
                     }
                   }}
@@ -696,16 +776,18 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                multiple
                 required
                 onChange={(e) => {
-                  setNewImageFile(e.target.files?.[0] || null);
+                  const files = Array.from(e.target.files || []);
+                  setNewImageFiles(files);
                   setErrorMessage('');
                 }}
                 className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700"
               />
 
               <p className="text-[11px] text-slate-500 mt-1">
-                Format JPG, PNG, atau WebP. Maksimal 50 MB.
+                Pilih satu atau beberapa foto. Format JPG, PNG, atau WebP. Maksimal 50 MB per foto.
               </p>
             </div>
               <button

@@ -604,11 +604,8 @@ export interface IPLRecap {
 
 export interface Documentation {
   id: string;
-
   title: string;
-
   date: string;
-
   category:
     | 'kerja-bakti'
     | 'lingkungan'
@@ -616,11 +613,9 @@ export interface Documentation {
     | 'pembangunan';
 
   description: string;
-
   image: string;
-
+  images?: string[];
   photographer: string;
-
   createdAt?: string;
   updatedAt?: string;
 }
