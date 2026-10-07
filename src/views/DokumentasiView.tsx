@@ -76,6 +76,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
   const [editDescription, setEditDescription] = useState('');
   const [editPhotographer, setEditPhotographer] = useState('');
   const [editImageFiles, setEditImageFiles] = useState<File[]>([]);
+  const [editRemovedImageUrls, setEditRemovedImageUrls] = useState<string[]>([]);
 
   // Status
   const [isSaving, setIsSaving] = useState(false);
@@ -146,6 +147,7 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
     setEditDescription(item.description);
     setEditPhotographer(item.photographer);
     setEditImageFiles([]);
+    setEditRemovedImageUrls([]);
     setErrorMessage('');
     setSelectedPhoto(null);
     setIsEditModalOpen(true);
@@ -169,7 +171,8 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
           description: editDescription,
           photographer: editPhotographer,
         },
-        editImageFiles.length > 0 ? editImageFiles : undefined
+        editImageFiles.length > 0 ? editImageFiles : undefined,
+        editRemovedImageUrls
       );
 
       setItems((current) =>
@@ -678,7 +681,82 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                     (opsional)
                   </span>
                 </label>
+                {/* Existing Gallery */}
+                {editingItem && (
+                  <div className="mb-3">
+                    <p className="mb-2 text-xs font-semibold text-slate-600">
+                      Foto saat ini
+                    </p>
 
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {(editingItem.images && editingItem.images.length > 0
+                        ? editingItem.images
+                        : [editingItem.image]
+                      ).map((imageUrl, index) => {
+                        const isRemoved =
+                          editRemovedImageUrls.includes(imageUrl);
+
+                        return (
+                          <div
+                            key={`${imageUrl}-${index}`}
+                            className={`relative overflow-hidden rounded-xl border ${
+                              isRemoved
+                                ? 'border-red-300 opacity-40'
+                                : 'border-slate-200'
+                            }`}
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`${editingItem.title} - Foto ${index + 1}`}
+                              className="h-24 w-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+
+                            {index === 0 && !isRemoved && (
+                              <span className="absolute left-1.5 top-1.5 rounded-md bg-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                                Cover
+                              </span>
+                            )}
+
+                            {isRemoved ? (
+                              <div className="absolute inset-0 flex items-center justify-center bg-red-900/30">
+                                <span className="rounded-md bg-red-600 px-2 py-1 text-[10px] font-semibold text-white">
+                                  Akan dihapus
+                                </span>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditRemovedImageUrls((current) => [
+                                    ...current,
+                                    imageUrl,
+                                  ]);
+                                  setErrorMessage('');
+                                }}
+                                className="absolute right-1.5 top-1.5 rounded-full bg-red-600 p-1.5 text-white shadow hover:bg-red-700 transition"
+                                aria-label={`Hapus foto ${index + 1}`}
+                                title="Hapus foto"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {editRemovedImageUrls.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setEditRemovedImageUrls([])}
+                        className="mt-2 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                      >
+                        Batalkan penghapusan foto
+                      </button>
+                    )}
+                  </div>
+                )}
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
@@ -693,8 +771,9 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
                 />
 
                 <p className="mt-1.5 text-[11px] text-slate-400">
-                  Pilih satu atau beberapa foto jika ingin mengganti seluruh foto
-                  dokumentasi. Format JPG, PNG, atau WebP. Maksimal 50 MB per foto.
+                  Tambahkan satu atau beberapa foto baru. Foto lama tetap tersimpan
+                  kecuali ditandai untuk dihapus di atas. Format JPG, PNG, atau WebP.
+                  Maksimal 50 MB per foto.
                 </p>
 
                 {editImageFiles.length > 0 && (
