@@ -389,7 +389,7 @@ export default function PengurusView() {
           <Users className="h-6 w-6 text-emerald-700" />
 
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
-            Pengurus Blok H
+            Struktur & Profil Pengurus
           </h1>
         </div>
 
