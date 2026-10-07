@@ -28,8 +28,8 @@ export const Footer: React.FC<FooterProps> = ({
               </span>
             </div>
             <p className="text-sm text-emerald-200/80 leading-relaxed max-w-md">
-              Portal informasi, transparansi keuangan, dan koordinasi warga rukun tetangga Blok H.
-              Mewujudkan lingkungan hunian pegunungan yang asri, guyub rukun, aman, dan modern.
+              Portal Warga Blok H untuk informasi, layanan, transparansi, dan koordinasi bersama.
+              Mewujudkan lingkungan hunian pegunungan yang asri, guyub, aman, dan modern - dari warga, untuk warga.
             </p>
             <div className="flex items-center gap-2 text-xs text-emerald-300/80 pt-1">
               <MapPin className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
@@ -98,7 +98,7 @@ export const Footer: React.FC<FooterProps> = ({
                   className="hover:text-white transition-colors text-left flex items-center gap-1.5"
                 >
                   <Mail className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Aspirasi & Lapor Sarpras</span>
+                  <span>Aspirasi & Lapor Warga</span>
                 </button>
               </li>
               <li>
@@ -108,15 +108,6 @@ export const Footer: React.FC<FooterProps> = ({
                 >
                   <Phone className="w-3.5 h-3.5 text-rose-400" />
                   <span>Kontak Darurat & Satpam</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onSelectTab('admin')}
-                  className="hover:text-white transition-colors text-left flex items-center gap-1.5"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Administrasi Pengurus</span>
                 </button>
               </li>
                <li>
@@ -161,7 +152,7 @@ export const Footer: React.FC<FooterProps> = ({
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-emerald-300/60 gap-3">
           <p>© {new Date().getFullYear()} Paguyuban Warga Griya Adika Narama Blok H. Hak Cipta Dilindungi.</p>
           <div className="flex items-center gap-4">
-            <span>Kawasan Sejuk Pegunungan</span>
+            <span>Kawasan Sejuk Pegunungan · Tempat Tumbuh Bersama</span>
            </div>
         </div>
       </div>
