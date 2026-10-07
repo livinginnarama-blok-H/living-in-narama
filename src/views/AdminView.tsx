@@ -68,6 +68,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   | 'kontak'
   | 'cloudflare'
   | 'data'
+  | null
 >('laporan');
   const [reports, setReports] = useState<CitizenReport[]>(() => DataService.getReports());
   const [reportSearch, setReportSearch] = useState('');
@@ -1382,13 +1383,13 @@ const kosongCount = activeHouseholds.filter(
             <UserCheck className="w-4 h-4 text-emerald-400" />
             <span>Mode Administrasi</span>
             <span aria-hidden="true">·</span>
-            <span>Pengurus Paguyuban Blok H</span>
+            <span>Pengurus Dewan Blok H</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
             Panel Pengurus Griya Adika Narama
           </h2>
           <p className="text-xs sm:text-sm text-emerald-200/80">
-            Kelola konten portal, tindak lanjuti keluhan warga, dan siapkan integrasi Cloudflare D1.
+            Kelola konten portal, tindak lanjuti keluhan warga, perubahan data dengan penuh pertimbangan dan kehati-hatian.
           </p>
         </div>
 
@@ -1439,14 +1440,14 @@ const kosongCount = activeHouseholds.filter(
           <CheckCircle2 className="w-4 h-4 text-emerald-700" />
           <span className="block text-xs font-bold text-slate-800">Komunitas
           </span>
-          <span className="text-[11px] text-slate-500 block">Atur progres & anggaran</span>
+          <span className="text-[11px] text-slate-500 block">Aktiiftas & Prestasi Warga</span>
         </button>
       </div>
 
       {/* Sub-tabs for Admin Management */}
       <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2">
         <button
-          onClick={() => setAdminTab('laporan')}
+          onClick={() => setAdminTab(adminTab === 'laporan' ? null : 'laporan')}
           className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
             adminTab === 'laporan'
               ? 'bg-emerald-800 text-white'
@@ -1710,7 +1711,7 @@ const kosongCount = activeHouseholds.filter(
         </div>
       )}
       <button
-        onClick={() => setAdminTab('warga')}
+        onClick={() => setAdminTab(adminTab === 'warga' ? null : 'warga')}
         className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
           adminTab === 'warga'
             ? 'bg-emerald-800 text-white'
@@ -1721,7 +1722,7 @@ const kosongCount = activeHouseholds.filter(
         <span>Data Warga ({activeHouseholds.length})</span>
       </button>
 <button
-  onClick={() => setAdminTab('pengurus')}
+  onClick={() => setAdminTab(adminTab === 'pengurus' ? null : 'pengurus')}
   className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
     adminTab === 'pengurus'
       ? 'bg-emerald-800 text-white'
@@ -1732,7 +1733,7 @@ const kosongCount = activeHouseholds.filter(
   <span>Pengurus ({organizationMembers.length})</span>
 </button>
 <button
-  onClick={() => setAdminTab('komunitas')}
+  onClick={() => setAdminTab(adminTab === 'komunitas' ? null : 'komunitas')}
   className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
     adminTab === 'komunitas'
       ? 'bg-emerald-800 text-white'
@@ -1743,7 +1744,7 @@ const kosongCount = activeHouseholds.filter(
   <span>Komunitas ({communityGroups.length + communityAchievements.length})</span>
 </button>
 <button
-  onClick={() => setAdminTab('kontak')}
+  onClick={() => setAdminTab(adminTab === 'kontak' ? null : 'kontak')}
   className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
     adminTab === 'kontak'
       ? 'bg-emerald-800 text-white'
