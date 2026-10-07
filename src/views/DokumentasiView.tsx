@@ -90,7 +90,9 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
     if (activeCategory === 'semua') return true;
     return item.category === activeCategory;
   });
-      const handleAddSubmit = async (e: React.FormEvent) => {
+
+  const latestItems = items.slice(0, 3);
+  const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!newTitle.trim()) return;
@@ -232,10 +234,10 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
             <span>Galeri & Arsip Kegiatan</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Dokumentasi Lingkungan Blok H
+            Dokumentasi Blok H
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Dokumentasi kegiatan dan penataan lingkungan Blok H.
+            Merekam momen, menyimpan cerita, dan menjadi bagian dari perjalanan bersama.
           </p>
         </div>
 
@@ -249,6 +251,61 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
           </button>
         )}
       </div>
+      {/* Dokumentasi Terbaru */}
+      {latestItems.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                Dokumentasi Terbaru
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Momen terbaru dari kegiatan dan perjalanan warga Blok H.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {latestItems.map((item) => (
+              <article
+                key={`latest-${item.id}`}
+                onClick={() => setSelectedPhoto(item)}
+                className="group bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer hover:border-emerald-600/40 hover:shadow-md transition-all"
+              >
+                <div className="relative aspect-[16/9] overflow-hidden bg-emerald-950">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                    <span className="text-white text-xs font-medium flex items-center gap-1.5">
+                      <ZoomIn className="w-4 h-4 text-emerald-300" />
+                      Perbesar Foto
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3.5">
+                  <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-1">
+                    <span className="uppercase font-semibold text-emerald-800">
+                      {item.category.replace('-', ' ')}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>{item.date}</span>
+                  </div>
+
+                  <h4 className="text-sm font-semibold text-slate-900 line-clamp-2">
+                    {item.title}
+                  </h4>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Categories Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
