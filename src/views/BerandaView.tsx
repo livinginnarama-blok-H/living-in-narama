@@ -149,6 +149,15 @@ const kosongCount = activeHouseholds.filter(
   (h) => h.occupancyStatus === 'kosong'
 ).length;
 
+const kongsiTerdaftarCount = activeHouseholds.filter(
+(h) => h.kongsiStatus === 'terdaftar'
+).length;
+
+const sensusSudahMengisiCount = activeHouseholds.filter(
+(h) => h.sensusStatus === 'sudah_mengisi'
+).length;
+
+
 // Find today's ronda team
 const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const todayName = dayNames[new Date().getDay()];
@@ -260,8 +269,9 @@ const upcomingAgendas = agendas
           </div>
         </div>
 
-{/* Mountain Highlight Bar */}
-<div className="relative z-10 bg-emerald-900/80 backdrop-blur-md border-t border-emerald-800/60 px-6 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+  {/* Mountain Highlight Bar */}
+
+<div className="relative z-10 bg-emerald-900/80 backdrop-blur-md border-t border-emerald-800/60 px-6 py-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 text-xs">
   <div>
     <span className="block text-emerald-300 text-[11px] font-medium">Unit Hunian Warga</span>
     <span className="text-sm sm:text-base font-bold text-white">
@@ -277,26 +287,46 @@ const upcomingAgendas = agendas
   </div>
 
   <div>
-  <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas</span>
-  <span className="text-sm sm:text-base font-bold text-white tabular-nums">
-    {formatCurrency(metrics.currentBalance)}
-  </span>
-
-  {lastFinanceUpdate && (
-    <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
-      Diperbarui: {new Date(lastFinanceUpdate).toLocaleString('id-ID', {
-        timeZone: 'Asia/Jakarta',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })} WIB
+    <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas</span>
+    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
+      {formatCurrency(metrics.currentBalance)}
     </span>
-  )}
-</div>
+    {lastFinanceUpdate && (
+      <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
+        Diperbarui: {new Date(lastFinanceUpdate).toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })} WIB
+      </span>
+    )}
+  </div>
+
+  <div>
+    <span className="block text-emerald-300 text-[11px] font-medium">Kongsi Kematian Terdaftar</span>
+    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
+      {kongsiTerdaftarCount} Rumah/KK
+    </span>
+    <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
+      Data kepesertaan Kongsi Kematian
+    </span>
+  </div>
+
+  <div>
+    <span className="block text-emerald-300 text-[11px] font-medium">Sensus Blok H</span>
+    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
+      {sensusSudahMengisiCount} Rumah/KK
+    </span>
+    <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
+      Rumah/KK sudah mengisi sensus
+    </span>
+  </div>
 </div>
       </section>
+
 
       {/* Pinned Announcement Highlight */}
 {pinnedAnnouncements.length > 0 && (
