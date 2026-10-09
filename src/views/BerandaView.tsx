@@ -306,7 +306,6 @@ const upcomingAgendas = agendas
     </span>
   </div>
 </div>
-      </section>
 
 <div>
     <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas</span>
@@ -326,6 +325,9 @@ const upcomingAgendas = agendas
       </span>
     )}
   </div>
+      </section>
+
+
       {/* Pinned Announcement Highlight */}
 {pinnedAnnouncements.length > 0 && (
   <section className="space-y-3">
