@@ -305,9 +305,8 @@ const upcomingAgendas = agendas
       Rumah/KK sudah mengisi sensus
     </span>
   </div>
-</div>
 
-<div>
+    <div>
     <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas</span>
     <span className="text-sm sm:text-base font-bold text-white tabular-nums">
       {formatCurrency(metrics.currentBalance)}
@@ -324,7 +323,8 @@ const upcomingAgendas = agendas
         })} WIB
       </span>
     )}
-  </div>
+  </div>  
+</div>
       </section>
 
 
