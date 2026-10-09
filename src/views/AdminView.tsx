@@ -69,7 +69,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   | 'cloudflare'
   | 'data'
   | null
->('laporan');
+>(null);
   const [reports, setReports] = useState<CitizenReport[]>(() => DataService.getReports());
   const [reportSearch, setReportSearch] = useState('');
   const [reportStatusFilter, setReportStatusFilter] = useState<
@@ -1336,6 +1336,8 @@ const semiHuniCount = activeHouseholds.filter(
 const kosongCount = activeHouseholds.filter(
   (h) => h.occupancyStatus === 'kosong'
 ).length;
+
+
 
 const kongsiTerdaftarCount = activeHouseholds.filter(
   (h) => h.kongsiStatus === 'terdaftar'
