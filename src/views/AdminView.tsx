@@ -1337,6 +1337,14 @@ const kosongCount = activeHouseholds.filter(
   (h) => h.occupancyStatus === 'kosong'
 ).length;
 
+const kongsiTerdaftarCount = activeHouseholds.filter(
+  (h) => h.kongsiStatus === 'terdaftar'
+).length;
+
+const sensusSudahMengisiCount = activeHouseholds.filter(
+  (h) => h.sensusStatus === 'sudah_mengisi'
+).length;
+
   if (!isAdmin) {
     return (
       <div className="max-w-md mx-auto py-8 sm:py-16">
@@ -2050,7 +2058,7 @@ const kosongCount = activeHouseholds.filter(
     </div>
 
     {/* Statistik */}
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
   <div className="bg-white border border-slate-200 rounded-xl p-4">
     <div className="text-[11px] text-slate-500">
       Total Rumah
@@ -2082,13 +2090,45 @@ const kosongCount = activeHouseholds.filter(
     <div className="text-[11px] text-slate-500">
       Kosong
     </div>
-    <div className="text-xl font-bold text-slate-500 mt-1">
-      {kosongCount}
-    </div>
+      <div className="text-xl font-bold text-slate-500 mt-1">
+    {kosongCount}
   </div>
 </div>
 
-    {/* Search */}
+{/* KARTU BARU 1: KONGSI KEMATIAN */}
+
+<div className="bg-white border border-slate-200 rounded-xl p-4">
+  <div className="text-[11px] text-slate-500">
+    Kongsi Kematian Terdaftar
+  </div>
+  <div className="text-xl font-bold text-emerald-700 mt-1">
+    {kongsiTerdaftarCount}
+  </div>
+  <div className="text-[10px] text-slate-400 mt-1">
+    Rumah/KK terdaftar
+  </div>
+</div>
+
+{/* KARTU BARU 2: SENSUS BLOK H */}
+
+<div className="bg-white border border-slate-200 rounded-xl p-4">
+  <div className="text-[11px] text-slate-500">
+    Sensus Blok H Sudah Mengisi
+  </div>
+  <div className="text-xl font-bold text-blue-700 mt-1">
+    {sensusSudahMengisiCount}
+  </div>
+  <div className="text-[10px] text-slate-400 mt-1">
+    Rumah/KK sudah mengisi
+  </div>
+</div>
+
+{/* PENUTUP GRID STATISTIK */}
+
+</div>
+
+{/* Search */}
+
     <div className="relative">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
 
