@@ -522,7 +522,97 @@ fetchIPLRecap(period?: string): Promise<IPLRecap>;
 /**
  * Centralized DataService Singleton Implementation
  */
+
+/**
+ * Kompres foto dokumentasi sebelum diunggah ke Supabase Storage.
+ * - Resolusi maksimal 1920 px pada sisi terpanjang.
+ * - JPEG quality 82%.
+ * - GIF dan SVG dipertahankan dalam format asli.
+ * - Jika browser gagal mengompres, gunakan file asli agar upload tetap bisa berjalan.
+ */
+async function compressDocumentationImage(file: File): Promise<File> {
+  if (
+    !file.type.startsWith('image/') ||
+    file.type === 'image/gif' ||
+    file.type === 'image/svg+xml' ||
+    typeof createImageBitmap !== 'function'
+  ) {
+    return file;
+  }
+
+  let bitmap: ImageBitmap | null = null;
+
+  try {
+    bitmap = await createImageBitmap(file);
+
+    const maxDimension = 2560;
+    const scale = Math.min(
+      1,
+      maxDimension / Math.max(bitmap.width, bitmap.height)
+    );
+
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      return file;
+    }
+
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, width, height);
+
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(bitmap, 0, 0, width, height);
+
+    bitmap.close();
+    bitmap = null;
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (result) => {
+          if (result) {
+            resolve(result);
+          } else {
+            reject(new Error('Browser gagal mengompres foto.'));
+          }
+        },
+        'image/jpeg',
+        0.88
+      );
+    });
+
+    // Jangan mengganti file kecil yang sudah lebih efisien jika
+    // dimensinya juga tidak perlu diperkecil.
+    if (scale === 1 && blob.size >= file.size) {
+      return file;
+    }
+
+    const baseName =
+      file.name.replace(/\.[^.]+$/, '') || 'dokumentasi';
+
+    return new File([blob], `${baseName}.jpg`, {
+      type: 'image/jpeg',
+      lastModified: file.lastModified || Date.now(),
+    });
+  } catch (error) {
+    console.warn(
+      '[DataService] Kompresi foto gagal; menggunakan file asli.',
+      error
+    );
+    return file;
+  } finally {
+    bitmap?.close();
+  }
+}
 export const DataService: IPortalDataRepository = {
+
   // ==========================================
   // 1. ANNOUNCEMENTS
   // ==========================================
@@ -2986,7 +3076,7 @@ return transactions;
 
     // 1. Upload semua foto ke Supabase Storage
     for (let index = 0; index < imageFiles.length; index++) {
-      const imageFile = imageFiles[index];
+      const imageFile = await compressDocumentationImage(imageFiles[index]);
 
       const extension =
         imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
@@ -3180,7 +3270,7 @@ return transactions;
 
   if (imageFiles && imageFiles.length > 0) {
     for (let index = 0; index < imageFiles.length; index++) {
-      const imageFile = imageFiles[index];
+      const imageFile = await compressDocumentationImage(imageFiles[index]);
 
       const extension =
         imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';

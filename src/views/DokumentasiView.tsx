@@ -46,7 +46,34 @@ export const DokumentasiView: React.FC<DokumentasiViewProps> = ({ isAdmin }) => 
   const [selectedPhoto, setSelectedPhoto] =
     useState<DocumentationItem | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  
+  // Preload foto sebelumnya dan berikutnya agar perpindahan lebih responsif.
+  useEffect(() => {
+    if (!selectedPhoto) return;
 
+    const images =
+      selectedPhoto.images && selectedPhoto.images.length > 0
+        ? selectedPhoto.images
+        : [selectedPhoto.image];
+
+    if (images.length < 2) return;
+
+    const currentIndex = Math.min(
+      selectedImageIndex,
+      images.length - 1
+    );
+
+    const adjacentIndexes = new Set([
+      (currentIndex + 1) % images.length,
+      (currentIndex - 1 + images.length) % images.length,
+    ]);
+
+    adjacentIndexes.forEach((index) => {
+      const preloadImage = new window.Image();
+      preloadImage.decoding = 'async';
+      preloadImage.src = images[index];
+    });
+  }, [selectedPhoto, selectedImageIndex]);
   // Admin Add Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
