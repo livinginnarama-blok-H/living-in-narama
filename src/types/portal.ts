@@ -38,6 +38,15 @@ export type OccupancyStatus =
   | 'semi-huni'
   | 'kosong';
 
+export type KongsiStatus =
+  | 'belum_diverifikasi'
+  | 'terdaftar'
+  | 'tidak_terdaftar';
+
+export type SensusStatus =
+  | 'belum_mengisi'
+  | 'sudah_mengisi';
+
 export interface Household {
   id: string;
 
@@ -58,7 +67,13 @@ export interface Household {
    * Status keaktifan data rumah.
    */
   isActive: boolean;
+  
+  /** Status pendaftaran Kongsi Kematian. */
+  kongsiStatus?: KongsiStatus;
 
+  /** Status pengisian Sensus Blok H. */
+  sensusStatus?: SensusStatus;
+  
   /**
    * Nomor kontak opsional.
    * Sebaiknya tidak ditampilkan publik.

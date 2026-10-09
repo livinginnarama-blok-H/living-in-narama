@@ -1615,7 +1615,7 @@ async fetchHouseholds(): Promise<Household[]> {
   const { data, error } = await supabase
     .from('households')
     .select(
-      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, created_at, updated_at'
+      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, kongsi_status, sensus_status, created_at, updated_at'
     )
     .order('house_number', { ascending: true });
 
@@ -1635,6 +1635,8 @@ async fetchHouseholds(): Promise<Household[]> {
     notes: item.notes ?? undefined,
     createdAt: item.created_at,
     updatedAt: item.updated_at,
+    kongsiStatus: item.kongsi_status ?? 'belum_diverifikasi',
+    sensusStatus: item.sensus_status ?? 'belum_mengisi',
   }));
 
   setStored<Household[]>(STORAGE_KEYS.HOUSEHOLDS, households);
@@ -1666,9 +1668,11 @@ async addHousehold(
       phone: item.phone || null,
       family_members: item.familyMembers ?? null,
       notes: item.notes || null,
+      kongsi_status: item.kongsiStatus ?? 'belum_diverifikasi',
+      sensus_status: item.sensusStatus ?? 'belum_mengisi',
     })
     .select(
-      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, created_at, updated_at'
+      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, kongsi_status, sensus_status, created_at, updated_at'
     )
     .single();
 
@@ -1688,6 +1692,8 @@ async addHousehold(
     notes: data.notes ?? undefined,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
+    kongsiStatus: data.kongsi_status ?? 'belum_diverifikasi',
+    sensusStatus: data.sensus_status ?? 'belum_mengisi',
   };
 
   emitDataChange();
@@ -1707,11 +1713,13 @@ async updateHousehold(item: Household): Promise<Household> {
       family_members: item.familyMembers ?? null,
       notes: item.notes || null,
       updated_at: new Date().toISOString(),
+      kongsi_status: item.kongsiStatus ?? 'belum_diverifikasi',
+      sensus_status: item.sensusStatus ?? 'belum_mengisi',
     })
     .eq('id', item.id)
     .select(
-      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, created_at, updated_at'
-    )
+  'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, kongsi_status, sensus_status, created_at, updated_at'
+  )
     .single();
 
   if (error) {
@@ -1730,6 +1738,8 @@ async updateHousehold(item: Household): Promise<Household> {
     notes: data.notes ?? undefined,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
+    kongsiStatus: data.kongsi_status ?? 'belum_diverifikasi',
+    sensusStatus: data.sensus_status ?? 'belum_mengisi',
   };
 
   emitDataChange();
@@ -1746,7 +1756,7 @@ async deactivateHousehold(id: string): Promise<Household> {
     })
     .eq('id', id)
     .select(
-      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, created_at, updated_at'
+  'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, kongsi_status, sensus_status, created_at, updated_at'
     )
     .single();
 
@@ -1766,6 +1776,8 @@ async deactivateHousehold(id: string): Promise<Household> {
     notes: data.notes ?? undefined,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
+    kongsiStatus: data.kongsi_status ?? 'belum_diverifikasi',
+    sensusStatus: data.sensus_status ?? 'belum_mengisi',
   };
 
   emitDataChange();
