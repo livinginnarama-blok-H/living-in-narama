@@ -287,25 +287,6 @@ const upcomingAgendas = agendas
   </div>
 
   <div>
-    <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas</span>
-    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
-      {formatCurrency(metrics.currentBalance)}
-    </span>
-    {lastFinanceUpdate && (
-      <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
-        Diperbarui: {new Date(lastFinanceUpdate).toLocaleString('id-ID', {
-          timeZone: 'Asia/Jakarta',
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })} WIB
-      </span>
-    )}
-  </div>
-
-  <div>
     <span className="block text-emerald-300 text-[11px] font-medium">Kongsi Kematian Terdaftar</span>
     <span className="text-sm sm:text-base font-bold text-white tabular-nums">
       {kongsiTerdaftarCount} Rumah/KK
@@ -327,7 +308,24 @@ const upcomingAgendas = agendas
 </div>
       </section>
 
-
+<div>
+    <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas</span>
+    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
+      {formatCurrency(metrics.currentBalance)}
+    </span>
+    {lastFinanceUpdate && (
+      <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
+        Diperbarui: {new Date(lastFinanceUpdate).toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })} WIB
+      </span>
+    )}
+  </div>
       {/* Pinned Announcement Highlight */}
 {pinnedAnnouncements.length > 0 && (
   <section className="space-y-3">
