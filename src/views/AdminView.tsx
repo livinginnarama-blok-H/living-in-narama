@@ -116,6 +116,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   );
   const [households, setHouseholds] = useState<Household[]>([]);
   const [householdSearch, setHouseholdSearch] = useState('');
+  const [savingHouseholdStatus, setSavingHouseholdStatus] = useState<string | null>(null);
   const [isHouseholdModalOpen, setIsHouseholdModalOpen] = useState(false);
   const [editingHousehold, setEditingHousehold] = useState<Household | null>(null);
   const [isSavingHousehold, setIsSavingHousehold] = useState(false);
@@ -951,6 +952,39 @@ const handleSaveHousehold = async (e: React.FormEvent) => {
     );
   } finally {
     setIsSavingHousehold(false);
+  }
+};
+
+const handleUpdateHouseholdStatus = async (
+  household: Household,
+  field: 'kongsiStatus' | 'sensusStatus',
+  value: Household['kongsiStatus'] | Household['sensusStatus']
+) => {
+  const updatedHousehold: Household = {
+    ...household,
+    [field]: value,
+  };
+
+  setSavingHouseholdStatus(`${household.id}-${field}`);
+
+  try {
+    const savedHousehold = await DataService.updateHousehold(updatedHousehold);
+
+    setHouseholds((current) =>
+      current.map((item) =>
+        item.id === savedHousehold.id ? savedHousehold : item
+      )
+    );
+  } catch (err) {
+    alert(
+      err instanceof Error
+        ? `Gagal menyimpan status: ${err.message}`
+        : 'Gagal menyimpan status warga.'
+    );
+
+    setHouseholds(await DataService.fetchHouseholds());
+  } finally {
+    setSavingHouseholdStatus(null);
   }
 };
 const handleSaveCommunityGroup = async (
@@ -2088,6 +2122,12 @@ const kosongCount = activeHouseholds.filter(
               <th className="text-left px-4 py-3 font-semibold text-slate-600">
                 Status
               </th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 min-w-[190px]">
+                Kongsi Kematian
+              </th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 min-w-[170px]">
+                Sensus Blok H
+              </th>
               <th className="text-right px-4 py-3 font-semibold text-slate-600">
                 Aksi
               </th>
@@ -2138,8 +2178,60 @@ const kosongCount = activeHouseholds.filter(
                   >
                     {household.isActive ? 'Aktif' : 'Nonaktif'}
                   </span>
+                                </td>
+
+                {/* Status Kongsi Kematian */}
+                <td className="px-4 py-3">
+                  <select
+                    value={household.kongsiStatus ?? 'belum_diverifikasi'}
+                    disabled={savingHouseholdStatus === `${household.id}-kongsiStatus`}
+                    onChange={(e) =>
+                      handleUpdateHouseholdStatus(
+                        household,
+                        'kongsiStatus',
+                        e.target.value as Household['kongsiStatus']
+                      )
+                    }
+                    className="w-full min-w-[170px] rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] text-slate-700 disabled:opacity-50"
+                  >
+                    <option value="belum_diverifikasi">Belum diverifikasi</option>
+                    <option value="terdaftar">Terdaftar</option>
+                    <option value="tidak_terdaftar">Tidak terdaftar</option>
+                  </select>
+
+                  {savingHouseholdStatus === `${household.id}-kongsiStatus` && (
+                    <p className="mt-1 text-[10px] text-emerald-700">
+                      Menyimpan...
+                    </p>
+                  )}
                 </td>
 
+                {/* Status Sensus Blok H */}
+                <td className="px-4 py-3">
+                  <select
+                    value={household.sensusStatus ?? 'belum_mengisi'}
+                    disabled={savingHouseholdStatus === `${household.id}-sensusStatus`}
+                    onChange={(e) =>
+                      handleUpdateHouseholdStatus(
+                        household,
+                        'sensusStatus',
+                        e.target.value as Household['sensusStatus']
+                      )
+                    }
+                    className="w-full min-w-[150px] rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] text-slate-700 disabled:opacity-50"
+                  >
+                    <option value="belum_mengisi">Belum mengisi</option>
+                    <option value="sudah_mengisi">Sudah mengisi</option>
+                  </select>
+
+                  {savingHouseholdStatus === `${household.id}-sensusStatus` && (
+                    <p className="mt-1 text-[10px] text-emerald-700">
+                      Menyimpan...
+                    </p>
+                  )}
+                </td>
+
+                {/* Aksi */}
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1.5">
                     <button
@@ -2169,7 +2261,7 @@ const kosongCount = activeHouseholds.filter(
             {filteredHouseholds.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={8}
                   className="px-4 py-10 text-center text-xs text-slate-400"
                 >
                   Belum ada data warga yang sesuai.
