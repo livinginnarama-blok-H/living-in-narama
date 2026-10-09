@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { TabKey } from './types/portal';
+import { AdminRole, TabKey } from './types/portal';
 import { HeaderNav } from './components/HeaderNav';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { Footer } from './components/Footer';
@@ -59,26 +59,38 @@ useEffect(() => {
   };
 }, []);
 const [activeTab, setActiveTab] = useState<TabKey>(getTabFromPath());
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState<AdminRole | null>(null);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isCheckReportOpen, setIsCheckReportOpen] = useState(false);
 
-  // Subscribe to centralized auth session changes (no direct storage access in view)
+  
+  // Hak akses berdasarkan status login dan role
+  const canManage =
+    isAuthenticated &&
+    (userRole === 'super_admin' ||
+      userRole === 'admin' ||
+      userRole === 'editor');
+
+  // Subscribe to centralized auth session changes
   useEffect(() => {
-  AuthService.initialize();
+    AuthService.initialize();
 
-  const unsubscribe = AuthService.subscribe((session) => {
-    setIsAdmin(session.isAuthenticated);
-  });
+    const unsubscribe = AuthService.subscribe((session) => {
+      setIsAuthenticated(session.isAuthenticated);
+      setUserRole(
+        session.isAuthenticated ? session.user?.role ?? null : null
+      );
+    });
 
-  const cleanupAuthListener = AuthService.setupAuthListener();
+    const cleanupAuthListener = AuthService.setupAuthListener();
 
-  return () => {
-    unsubscribe();
-    cleanupAuthListener();
-  };
-}, []);
+    return () => {
+      unsubscribe();
+      cleanupAuthListener();
+    };
+  }, []);
 
   // Scroll to top on tab change
   const handleSelectTab = (tab: TabKey) => {
@@ -122,7 +134,7 @@ setActiveTab('beranda');
       <HeaderNav
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        isAdmin={isAdmin}
+        isAdmin={isAuthenticated}
         onLogoutAdmin={handleLogout}
         onOpenEmergency={() => setIsEmergencyOpen(true)}
         onOpenReport={() => setIsReportOpen(true)}
@@ -139,23 +151,25 @@ setActiveTab('beranda');
           />
         )}
 
-        {activeTab === 'pengumuman' && <PengumumanView isAdmin={isAdmin} />}
+        
+        {activeTab === 'pengumuman' && <PengumumanView isAdmin={canManage} />}
 
-        {activeTab === 'agenda' && <AgendaView isAdmin={isAdmin} />}
+        {activeTab === 'agenda' && <AgendaView isAdmin={canManage} />}
 
-        {activeTab === 'komunitas' && <KomunitasView isAdmin={isAdmin} />}
+        {activeTab === 'komunitas' && <KomunitasView isAdmin={canManage} />}
 
-        {activeTab === 'keuangan' && <KeuanganView isAdmin={isAdmin} />}
+        {activeTab === 'keuangan' && <KeuanganView isAdmin={canManage} />}
 
-        {activeTab === 'dokumentasi' && <DokumentasiView isAdmin={isAdmin} />}
+        {activeTab === 'dokumentasi' && <DokumentasiView isAdmin={canManage} />}
 
         {activeTab === 'pengurus' && <PengurusView />}
 
         {activeTab === 'admin' && (
           <AdminView
-            isAdmin={isAdmin}
+            isAdmin={isAuthenticated}
+            canManage={canManage}
             onLoginSuccess={() => {
-              setIsAdmin(true);
+              setIsAuthenticated(true);
             }}
             onLogout={handleLogout}
             onSelectTab={handleSelectTab}
@@ -174,7 +188,7 @@ setActiveTab('beranda');
       <MobileBottomNav
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        isAdmin={isAdmin}
+        isAdmin={isAuthenticated}
       />
 
       {/* Emergency Contacts Modal */}

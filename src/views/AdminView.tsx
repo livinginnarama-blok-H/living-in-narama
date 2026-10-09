@@ -40,15 +40,19 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 
+
 interface AdminViewProps {
   isAdmin: boolean;
+  canManage: boolean;
   onLoginSuccess: () => void;
   onLogout: () => void;
   onSelectTab: (tab: TabKey) => void;
 }
 
+
 export const AdminView: React.FC<AdminViewProps> = ({
   isAdmin,
+  canManage,
   onLoginSuccess,
   onLogout,
   onSelectTab,
@@ -307,71 +311,7 @@ const [organizationMemberIsActive, setOrganizationMemberIsActive] =
     void loadOrganizationMembers();
   });
   
-const handleSaveOrganizationMember = async (
-  e: React.FormEvent
-) => {
-  e.preventDefault();
-
-  if (!organizationMemberName.trim()) {
-    setOrganizationMemberError('Nama pengurus wajib diisi.');
-    return;
-  }
-
-  if (!organizationMemberPosition.trim()) {
-    setOrganizationMemberError('Jabatan wajib diisi.');
-    return;
-  }
-
-  try {
-    setIsSavingOrganizationMember(true);
-    setOrganizationMemberError('');
-
-    const payload = {
-      name: organizationMemberName.trim(),
-      position: organizationMemberPosition.trim(),
-      division: organizationMemberDivision.trim() || null,
-      phone: organizationMemberPhone.trim() || null,
-      photoUrl: organizationMemberPhotoUrl.trim() || null,
-      bio: organizationMemberBio.trim() || null,
-      responsibilities:
-        organizationMemberResponsibilities.trim() || null,
-      parentId: editingOrganizationMember?.parentId ?? null,
-      displayOrder:
-        Number(organizationMemberDisplayOrder) || 0,
-      isActive: organizationMemberIsActive,
-      periodStart: organizationMemberPeriodStart,
-      periodEnd: organizationMemberPeriodEnd,
-    };
-
-    if (editingOrganizationMember) {
-      await DataService.updateOrganizationMember(
-        editingOrganizationMember.id,
-        payload
-      );
-    } else {
-      await DataService.addOrganizationMember(payload);
-    }
-
-    await loadOrganizationMembers();
-
-    setIsOrganizationMemberModalOpen(false);
-    setEditingOrganizationMember(null);
-  } catch (err) {
-    console.error(
-      '[AdminView] Gagal menyimpan data pengurus:',
-      err
-    );
-
-    setOrganizationMemberError(
-      err instanceof Error
-        ? err.message
-        : 'Gagal menyimpan data pengurus.'
-    );
-  } finally {
-    setIsSavingOrganizationMember(false);
-  }
-};
-  return () => {
+ return () => {
     cancelled = true;
     unsubscribe();
   };
@@ -451,7 +391,12 @@ const openCommunityGroupModal = (
 };
 const openEmergencyContactModal = (
   contact: EmergencyContact | null = null
+
 ) => {
+  if (!canManage) {
+    window.alert('Akun Viewer hanya memiliki akses baca.');
+    return;
+  }
   setEditingEmergencyContact(contact);
   setEmergencyContactTitle(contact?.title ?? '');
   setEmergencyContactName(contact?.name ?? '');
@@ -464,7 +409,13 @@ const openEmergencyContactModal = (
   setEmergencyContactIsActive(contact?.isActive ?? true);
   setIsEmergencyContactModalOpen(true);
 };
+
 const saveEmergencyContact = async () => {
+  if (!canManage) {
+    setEmergencyContactError('Akun Viewer hanya memiliki akses baca.');
+    return;
+  }
+
   if (!emergencyContactTitle.trim()) {
     setEmergencyContactError('Judul kontak wajib diisi.');
     return;
@@ -532,6 +483,10 @@ const saveEmergencyContact = async () => {
 const toggleEmergencyContact = async (
   contact: EmergencyContact
 ) => {
+  if (!canManage) {
+    window.alert('Akun Viewer hanya memiliki akses baca.');
+    return;
+  }
   try {
     setEmergencyContactError(null);
 
@@ -560,9 +515,15 @@ const toggleEmergencyContact = async (
     );
   }
 };
+
 const deleteEmergencyContact = async (
   contact: EmergencyContact
 ) => {
+  if (!canManage) {
+    window.alert('Akun Viewer hanya memiliki akses baca.');
+    return;
+  }
+
   const confirmed = window.confirm(
     `Hapus kontak "${contact.title}"?`
   );
@@ -621,10 +582,18 @@ const deleteEmergencyContact = async (
   setOrganizationMemberError('');
   setIsOrganizationMemberModalOpen(true);
 };
+  
   const handleSaveOrganizationMember = async (
-  e: React.FormEvent
-) => {
-  e.preventDefault();
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+
+    if (!canManage) {
+      setOrganizationMemberError(
+        'Akun Viewer hanya memiliki akses baca.'
+      );
+      return;
+    }
 
   if (!organizationMemberName.trim()) {
     setOrganizationMemberError('Nama pengurus wajib diisi.');
@@ -784,6 +753,10 @@ const deleteEmergencyContact = async (
   }
 };
   const handleDeleteReport = async (report: CitizenReport) => {
+        if (!canManage) {
+      window.alert('Akun Viewer hanya memiliki akses baca.');
+      return;
+    }
     const reportLabel = report.reportNumber || report.id;
 
     const confirmed = window.confirm(
@@ -955,11 +928,17 @@ const handleSaveHousehold = async (e: React.FormEvent) => {
   }
 };
 
+
 const handleUpdateHouseholdStatus = async (
   household: Household,
   field: 'kongsiStatus' | 'sensusStatus',
   value: Household['kongsiStatus'] | Household['sensusStatus']
 ) => {
+  if (!canManage) {
+    window.alert('Akun Viewer hanya memiliki akses baca.');
+    return;
+  }
+
   const updatedHousehold: Household = {
     ...household,
     [field]: value,
@@ -987,10 +966,16 @@ const handleUpdateHouseholdStatus = async (
     setSavingHouseholdStatus(null);
   }
 };
+
 const handleSaveCommunityGroup = async (
   e: React.FormEvent
 ) => {
   e.preventDefault();
+
+  if (!canManage) {
+    setCommunityError('Akun Viewer hanya memiliki akses baca.');
+    return;
+  }
 
   if (!communityGroupName.trim()) {
     setCommunityError('Nama komunitas wajib diisi.');
@@ -1071,9 +1056,15 @@ const handleSaveCommunityGroup = async (
     setIsSavingCommunityGroup(false);
   }
 };
+
 const handleDeleteCommunityGroup = async (
   group: CommunityGroup
 ) => {
+  if (!canManage) {
+    window.alert('Akun Viewer hanya memiliki akses baca.');
+    return;
+  }
+
   const confirmed = window.confirm(
     `Hapus komunitas "${group.name}"?`
   );
@@ -1154,6 +1145,10 @@ const handleSaveCommunityAchievement = async (
   e: React.FormEvent
 ) => {
   e.preventDefault();
+  if (!canManage) {
+    setCommunityError('Akun Viewer hanya memiliki akses baca.');
+    return;
+  }
 
   if (!communityAchievementTitle.trim()) {
     setCommunityError('Judul prestasi wajib diisi.');
@@ -1240,9 +1235,15 @@ const handleSaveCommunityAchievement = async (
     setIsSavingCommunityAchievement(false);
   }
 };
+
 const handleDeleteCommunityAchievement = async (
   achievement: CommunityAchievement
 ) => {
+  if (!canManage) {
+    window.alert('Akun Viewer hanya memiliki akses baca.');
+    return;
+  }
+
   const confirmed = window.confirm(
     `Hapus prestasi "${achievement.title}"?`
   );
@@ -1270,7 +1271,13 @@ const handleDeleteCommunityAchievement = async (
     );
   }
 };
+
 const handleDeactivateHousehold = async (household: Household) => {
+  if (!canManage) {
+    window.alert('Akun Viewer hanya memiliki akses baca.');
+    return;
+  }
+
   const confirmed = window.confirm(
     `Nonaktifkan data ${household.houseNumber} - ${household.residentName}?\n\n` +
       `Data tidak akan dihapus agar histori transaksi tetap tersimpan.`
@@ -1289,12 +1296,22 @@ const handleDeactivateHousehold = async (household: Household) => {
     );
   }
 };
-  const handleResetData = () => {
-    if (window.confirm('Kembalikan semua data ke dummy bawaan awal Griya Adika Narama?')) {
-      DataService.resetAllData();
-      alert('Data berhasil di-reset ke versi awal.');
-    }
-  };
+  
+const handleResetData = () => {
+  if (!canManage) {
+    window.alert('Akun Viewer hanya memiliki akses baca.');
+    return;
+  }
+
+  if (
+    window.confirm(
+      'Kembalikan semua data ke dummy bawaan awal Griya Adika Narama?'
+    )
+  ) {
+    DataService.resetAllData();
+    window.alert('Data berhasil di-reset ke versi awal.');
+  }
+};
 
   const handleCopySchema = () => {
     navigator.clipboard.writeText(d1SchemaSql);
@@ -1638,27 +1655,37 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
       <div className="flex items-center gap-2">
         <span className="text-[11px] text-slate-500">Status:</span>
 
-        <select
-          value={rep.status}
-          onChange={(e) =>
-            handleUpdateReportStatus(
-              rep.id,
-              rep.status,
-              e.target.value as CitizenReport['status']
-            )
-          }
-          className="text-xs font-semibold rounded-md border border-slate-300 py-1 px-2 bg-slate-50 text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-700"
-        >
-          <option value="menunggu">
-            Menunggu Tindak Lanjut
-          </option>
-          <option value="diproses">
-            Sedang Diproses Satpam/Seksi
-          </option>
-          <option value="selesai">
-            Selesai Ditangani
-          </option>
-        </select>
+        {canManage ? (
+  <select
+    value={rep.status}
+    onChange={(e) =>
+      handleUpdateReportStatus(
+        rep.id,
+        rep.status,
+        e.target.value as CitizenReport['status']
+      )
+    }
+    className="text-xs font-semibold rounded-md border border-slate-300 py-1 px-2 bg-slate-50 text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+  >
+    <option value="menunggu">
+      Menunggu Tindak Lanjut
+    </option>
+    <option value="diproses">
+      Sedang Diproses Satpam/Seksi
+    </option>
+    <option value="selesai">
+      Selesai Ditangani
+    </option>
+  </select>
+) : (
+  <span className="text-xs font-semibold text-slate-700">
+    {rep.status === 'menunggu'
+      ? 'Menunggu Tindak Lanjut'
+      : rep.status === 'diproses'
+        ? 'Sedang Diproses Satpam/Seksi'
+        : 'Selesai Ditangani'}
+  </span>
+)}
       </div>
     </div>
 
@@ -1699,13 +1726,15 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
         : 'Lihat Riwayat'}
   </button>
 
-  <button
-    type="button"
-    onClick={() => handleDeleteReport(rep)}
-    className="text-xs font-semibold text-red-700 hover:text-red-800 hover:underline"
-  >
-    Hapus Laporan
-  </button>
+    {canManage && (
+    <button
+      type="button"
+      onClick={() => handleDeleteReport(rep)}
+      className="text-xs font-semibold text-red-700 hover:text-red-800 hover:underline"
+    >
+      Hapus Laporan
+    </button>
+  )}
 
       {expandedReportHistory === rep.id && (
         <div className="mt-3 border-l-2 border-emerald-200 pl-4 space-y-3">
@@ -1812,14 +1841,16 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
         </p>
       </div>
 
-      <button
-        type="button"
-        onClick={() => openOrganizationMemberModal()}
-        className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-900"
-      >
-        <UserPlus className="h-4 w-4" />
-        Tambah Pengurus
-      </button>
+            {canManage && (
+        <button
+          type="button"
+          onClick={() => openOrganizationMemberModal()}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-900"
+        >
+          <UserPlus className="h-4 w-4" />
+          Tambah Pengurus
+        </button>
+      )}
     </div>
 
     {/* Error */}
@@ -1851,14 +1882,17 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
           Tambahkan susunan pengurus Blok H untuk periode 2026–2029.
         </p>
 
-        <button
-          type="button"
-          onClick={() => openOrganizationMemberModal()}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-900"
-        >
-          <UserPlus className="h-4 w-4" />
-          Tambah Pengurus
-        </button>
+        
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => openOrganizationMemberModal()}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-900"
+          >
+            <UserPlus className="h-4 w-4" />
+            Tambah Pengurus
+          </button>
+        )}
       </div>
     ) : (
       /* Table */
@@ -1973,59 +2007,58 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                       </span>
                     </td>
 
+                    
                     {/* Aksi */}
                     <td className="px-4 py-4">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openOrganizationMemberModal(
-                              member
-                            )
-                          }
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
-                          title="Edit pengurus"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                      {canManage && (
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openOrganizationMemberModal(member)
+                            }
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                            title="Edit pengurus"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const confirmed =
-                              window.confirm(
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const confirmed = window.confirm(
                                 `Hapus data pengurus "${member.name}"?`
                               );
 
-                            if (!confirmed) {
-                              return;
-                            }
+                              if (!confirmed) return;
 
-                            try {
-                              setOrganizationMemberError('');
+                              try {
+                                setOrganizationMemberError('');
 
-                              await DataService.deleteOrganizationMember(
-                                member.id
-                              );
-                            } catch (err) {
-                              console.error(
-                                '[AdminView] Gagal menghapus data pengurus:',
-                                err
-                              );
+                                await DataService.deleteOrganizationMember(
+                                  member.id
+                                );
 
-                              setOrganizationMemberError(
-                                err instanceof Error
-                                  ? err.message
-                                  : 'Gagal menghapus data pengurus.'
-                              );
-                            }
-                          }}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                          title="Hapus pengurus"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
+                                } catch (err) {
+                                console.error(
+                                  '[AdminView] Gagal menghapus data pengurus:',
+                                  err
+                                );
+
+                                setOrganizationMemberError(
+                                  err instanceof Error
+                                    ? err.message
+                                    : 'Gagal menghapus data pengurus.'
+                                );
+                              }
+                            }}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                            title="Hapus pengurus"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -2050,13 +2083,15 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
         </p>
       </div>
 
-      <button
-        onClick={openAddHousehold}
-        className="px-3 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-      >
-        <Plus className="w-3.5 h-3.5" />
-        Tambah Data Warga
-      </button>
+            {canManage && (
+        <button
+          onClick={openAddHousehold}
+          className="px-3 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Tambah Data Warga
+        </button>
+      )}
     </div>
 
     {/* Statistik */}
@@ -2224,31 +2259,66 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
 
                 {/* Status Kongsi Kematian */}
                 <td className="px-4 py-3">
-                  <select
-                    value={household.kongsiStatus ?? 'belum_diverifikasi'}
-                    disabled={savingHouseholdStatus === `${household.id}-kongsiStatus`}
-                    onChange={(e) =>
-                      handleUpdateHouseholdStatus(
-                        household,
-                        'kongsiStatus',
-                        e.target.value as Household['kongsiStatus']
-                      )
-                    }
-                    className="w-full min-w-[170px] rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] text-slate-700 disabled:opacity-50"
-                  >
-                    <option value="belum_diverifikasi">Belum diverifikasi</option>
-                    <option value="terdaftar">Terdaftar</option>
-                    <option value="tidak_terdaftar">Tidak terdaftar</option>
-                  </select>
-
-                  {savingHouseholdStatus === `${household.id}-kongsiStatus` && (
-                    <p className="mt-1 text-[10px] text-emerald-700">
-                      Menyimpan...
-                    </p>
+                  {canManage ? (
+                    <select
+                      value={household.kongsiStatus ?? 'belum_diverifikasi'}
+                      disabled={savingHouseholdStatus === `${household.id}-kongsiStatus`}
+                      onChange={(e) =>
+                        handleUpdateHouseholdStatus(
+                          household,
+                          'kongsiStatus',
+                          e.target.value as Household['kongsiStatus']
+                        )
+                      }
+                      className="w-full min-w-[170px] rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] text-slate-700 disabled:opacity-50"
+                    >
+                      <option value="belum_diverifikasi">Belum diverifikasi</option>
+                      <option value="terdaftar">Terdaftar</option>
+                      <option value="tidak_terdaftar">Tidak terdaftar</option>
+                    </select>
+                  ) : (
+                    <span className="text-[11px] text-slate-700">
+                      {household.kongsiStatus === 'terdaftar'
+                        ? 'Terdaftar'
+                        : household.kongsiStatus === 'tidak_terdaftar'
+                          ? 'Tidak terdaftar'
+                          : 'Belum diverifikasi'}
+                    </span>
                   )}
+
+                  {canManage &&
+                    savingHouseholdStatus === `${household.id}-kongsiStatus` && (
+                      <p className="mt-1 text-[10px] text-emerald-700">
+                        Menyimpan...
+                      </p>
+                    )}
                 </td>
 
                 {/* Status Sensus Blok H */}
+                <td className="px-4 py-3">
+                  {canManage ? (
+                    <select
+                      value={household.sensusStatus ?? 'belum_mengisi'}
+                      onChange={(e) =>
+                        handleUpdateHouseholdStatus(
+                          household,
+                          'sensusStatus',
+                          e.target.value as Household['sensusStatus']
+                        )
+                      }
+                      className="w-full min-w-[150px] rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] text-slate-700"
+                    >
+                      <option value="belum_mengisi">Belum mengisi</option>
+                      <option value="sudah_mengisi">Sudah mengisi</option>
+                    </select>
+                  ) : (
+                    <span className="text-[11px] text-slate-700">
+                      {household.sensusStatus === 'sudah_mengisi'
+                        ? 'Sudah mengisi'
+                        : 'Belum mengisi'}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <select
                     value={household.sensusStatus ?? 'belum_mengisi'}
@@ -2273,29 +2343,29 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                   )}
                 </td>
 
-                {/* Aksi */}
+               {/* Aksi */}
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <button
-                      onClick={() => openEditHousehold(household)}
-                      title="Edit data"
-                      className="p-1.5 rounded-md border border-slate-200 text-slate-600 hover:text-emerald-700 hover:border-emerald-300"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-
-                    {household.isActive && (
+                  {canManage && (
+                    <div className="flex items-center justify-end gap-1.5">
                       <button
-                        onClick={() =>
-                          handleDeactivateHousehold(household)
-                        }
-                        title="Nonaktifkan data"
-                        className="p-1.5 rounded-md border border-slate-200 text-slate-600 hover:text-rose-700 hover:border-rose-300"
+                        onClick={() => openEditHousehold(household)}
+                        title="Edit data"
+                        className="p-1.5 rounded-md border border-slate-200 text-slate-600 hover:text-emerald-700 hover:border-emerald-300"
                       >
-                        <UserX className="w-3.5 h-3.5" />
+                        <Pencil className="w-3.5 h-3.5" />
                       </button>
-                    )}
-                  </div>
+
+                      {household.isActive && (
+                        <button
+                          onClick={() => handleDeactivateHousehold(household)}
+                          title="Nonaktifkan data"
+                          className="p-1.5 rounded-md border border-slate-200 text-slate-600 hover:text-rose-700 hover:border-rose-300"
+                        >
+                          <UserX className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -2316,7 +2386,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
     </div>
   </div>
 )}
-      {isHouseholdModalOpen && (
+      {canManage && isHouseholdModalOpen && (
   <div className="fixed inset-0 z-50 bg-slate-950/40 flex items-center justify-center p-4">
     <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
@@ -2517,6 +2587,8 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                     </p>
                   </div>
 
+                  
+                {canManage && (
                   <button
                     type="button"
                     onClick={() => openCommunityGroupModal()}
@@ -2525,6 +2597,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                     <Plus className="h-4 w-4" />
                     Tambah Komunitas
                   </button>
+                )}
                 </div>
 
                 {communityGroups.length === 0 ? (
@@ -2580,27 +2653,28 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openCommunityGroupModal(group)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
-                          </button>
+                        
+                        {canManage && (
+                          <div className="flex shrink-0 items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openCommunityGroupModal(group)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDeleteCommunityGroup(group)
-                            }
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Hapus
-                          </button>
-                        </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCommunityGroup(group)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Hapus
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2619,6 +2693,8 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                     </p>
                   </div>
 
+                  
+                {canManage && (
                   <button
                     type="button"
                     onClick={() => openCommunityAchievementModal()}
@@ -2627,6 +2703,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                     <Plus className="h-4 w-4" />
                     Tambah Prestasi
                   </button>
+                )}
                 </div>
 
                 {communityAchievements.length === 0 ? (
@@ -2678,33 +2755,36 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openCommunityAchievementModal(
-                                achievement
-                              )
-                            }
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
-                          </button>
+                        
+                        {canManage && (
+                          <div className="flex shrink-0 items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openCommunityAchievementModal(
+                                  achievement
+                                )
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDeleteCommunityAchievement(
-                                achievement
-                              )
-                            }
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Hapus
-                          </button>
-                        </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteCommunityAchievement(
+                                  achievement
+                                )
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Hapus
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2730,6 +2810,8 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                 </p>
               </div>
 
+              
+            {canManage && (
               <button
                 type="button"
                 onClick={() => openEmergencyContactModal()}
@@ -2738,6 +2820,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                 <Plus className="h-4 w-4" />
                 Tambah Kontak
               </button>
+            )}
             </div>
           </div>
 
@@ -2843,37 +2926,40 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEmergencyContactModal(contact)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </button>
+                      
+                      {canManage && (
+                        <div className="flex shrink-0 flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEmergencyContactModal(contact)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={() => toggleEmergencyContact(contact)}
-                          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
-                            contact.isActive
-                              ? 'border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
-                              : 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                          }`}
-                        >
-                          {contact.isActive ? 'Nonaktifkan' : 'Aktifkan'}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleEmergencyContact(contact)}
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                              contact.isActive
+                                ? 'border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                : 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                            }`}
+                          >
+                            {contact.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={() => deleteEmergencyContact(contact)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Hapus
-                        </button>
-                      </div>
+                          <button
+                            type="button"
+                            onClick={() => deleteEmergencyContact(contact)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Hapus
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -2882,7 +2968,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
         </div>
       )}
             {/* Modal Tambah / Edit Kontak Darurat */}
-      {isEmergencyContactModalOpen && (
+      {canManage && isEmergencyContactModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
           <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
             {/* Header */}
@@ -3117,7 +3203,8 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
       )}
 
       {/* Modal Tambah / Edit Komunitas */}
-      {isCommunityGroupModalOpen && (
+      
+      {canManage && isCommunityGroupModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
           <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
@@ -3305,7 +3392,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
       )}
 
       {/* Modal Tambah / Edit Prestasi */}
-      {isCommunityAchievementModalOpen && (
+      {canManage && isCommunityAchievementModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
           <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
@@ -3461,7 +3548,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
         </div>
       )}
       {/* Modal Tambah / Edit Pengurus */}
-      {isOrganizationMemberModalOpen && (
+      {canManage && isOrganizationMemberModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
           <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
             {/* Header */}

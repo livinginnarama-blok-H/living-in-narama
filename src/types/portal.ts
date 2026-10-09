@@ -73,7 +73,7 @@ export interface Household {
 
   /** Status pengisian Sensus Blok H. */
   sensusStatus?: SensusStatus;
-  
+
   /**
    * Nomor kontak opsional.
    * Sebaiknya tidak ditampilkan publik.
@@ -646,7 +646,8 @@ export type DocumentationItem = Documentation;
 export type AdminRole =
   | 'super_admin'
   | 'admin'
-  | 'editor';
+  | 'editor'
+  | 'viewer';
 
 export interface AdminUser {
   id: string;

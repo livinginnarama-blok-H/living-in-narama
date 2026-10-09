@@ -3728,26 +3728,6 @@ const newReport: CitizenReport = {
 
   const savedReport: CitizenReport = newReport;
 
-   const { error: historyError } = await supabase
-  .from('citizen_report_status_history')
-  .insert({
-    report_id: savedReport.id,
-    status: savedReport.status,
-    note: 'Laporan diterima',
-    created_at: savedReport.createdAt ?? new Date().toISOString(),
-  });
-
-if (historyError) {
-  console.error(
-    '[DataService] Supabase insert initial report status history error:',
-    historyError
-  );
-
-  throw new Error(
-    historyError.message || 'Gagal menyimpan riwayat awal laporan'
-  );
-}
-
 emitDataChange();
 return savedReport;
   },

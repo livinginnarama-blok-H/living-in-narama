@@ -70,8 +70,6 @@ function startIdleTracking() {
     })
   })
 
-  window.addEventListener('visibilitychange', recordActivity)
-
   idleCheckTimer = setInterval(() => {
     void checkIdleTimeout()
   }, 30_000)
@@ -94,7 +92,7 @@ function stopIdleTracking() {
     window.removeEventListener(eventName, recordActivity)
   })
 
-  window.removeEventListener('visibilitychange', recordActivity)
+  
 
   if (idleCheckTimer) {
     clearInterval(idleCheckTimer)
