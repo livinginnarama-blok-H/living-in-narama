@@ -2407,7 +2407,6 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
   </div>
 </div>
 
-
     {/* Table */}
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
       <div className="overflow-x-auto">
@@ -3475,6 +3474,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
                     >
                       <option value="atlet">Atlet</option>
+                      <option value="gamers">Gamers</option>
                       <option value="gamers">Gamers</option>
                     </select>
                   </div>
