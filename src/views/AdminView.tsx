@@ -39,7 +39,9 @@ import {
   UserPlus,
   ShieldAlert,
 } from 'lucide-react';
-
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface AdminViewProps {
   isAdmin: boolean;
@@ -120,6 +122,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
   );
   const [households, setHouseholds] = useState<Household[]>([]);
   const [householdSearch, setHouseholdSearch] = useState('');
+  const [filterOccupancy, setFilterOccupancy] = useState('semua');
+  const [filterActive, setFilterActive] = useState('semua');
+  const [filterKongsi, setFilterKongsi] = useState('semua');
+  const [filterSensus, setFilterSensus] = useState('semua');
   const [savingHouseholdStatus, setSavingHouseholdStatus] = useState<string | null>(null);
   const [isHouseholdModalOpen, setIsHouseholdModalOpen] = useState(false);
   const [editingHousehold, setEditingHousehold] = useState<Household | null>(null);
@@ -1324,16 +1330,40 @@ const handleResetData = () => {
     setCopiedWorker(true);
     setTimeout(() => setCopiedWorker(false), 2000);
   };
-  const filteredHouseholds = households
+  
+const filteredHouseholds = households
   .filter((h) => {
     const keyword = householdSearch.trim().toLowerCase();
 
-    if (!keyword) return true;
+    const matchesSearch =
+      !keyword ||
+      (h.houseNumber || '').toLowerCase().includes(keyword) ||
+      (h.residentName || '').toLowerCase().includes(keyword) ||
+      (h.phone || '').toLowerCase().includes(keyword);
+
+    const matchesOccupancy =
+      filterOccupancy === 'semua' ||
+      h.occupancyStatus === filterOccupancy;
+
+    const matchesActive =
+      filterActive === 'semua' ||
+      (filterActive === 'aktif' && h.isActive) ||
+      (filterActive === 'nonaktif' && !h.isActive);
+
+    const matchesKongsi =
+      filterKongsi === 'semua' ||
+      (h.kongsiStatus ?? 'belum_diverifikasi') === filterKongsi;
+
+    const matchesSensus =
+      filterSensus === 'semua' ||
+      (h.sensusStatus ?? 'belum_mengisi') === filterSensus;
 
     return (
-      h.houseNumber.toLowerCase().includes(keyword) ||
-      h.residentName.toLowerCase().includes(keyword) ||
-      (h.phone || '').toLowerCase().includes(keyword)
+      matchesSearch &&
+      matchesOccupancy &&
+      matchesActive &&
+      matchesKongsi &&
+      matchesSensus
     );
   })
   .sort((a, b) =>
@@ -1342,6 +1372,139 @@ const handleResetData = () => {
       sensitivity: 'base',
     })
   );
+
+const getHouseholdExportRows = () =>
+  filteredHouseholds.map((h) => ({
+    'No. Rumah': h.houseNumber,
+    'Nama Warga': h.residentName,
+    'Nomor HP': h.phone || '-',
+    'Status Hunian':
+      h.occupancyStatus === 'huni'
+        ? 'Huni'
+        : h.occupancyStatus === 'semi-huni'
+          ? 'Semi Huni'
+          : 'Kosong',
+    'Jumlah Anggota Keluarga': h.familyMembers ?? '-',
+    'Status Aktif': h.isActive ? 'Aktif' : 'Nonaktif',
+    'Kongsi Kematian':
+      h.kongsiStatus === 'terdaftar'
+        ? 'Terdaftar'
+        : h.kongsiStatus === 'tidak_terdaftar'
+          ? 'Tidak terdaftar'
+          : 'Belum diverifikasi',
+    'Sensus Blok H':
+      h.sensusStatus === 'sudah_mengisi'
+        ? 'Sudah mengisi'
+        : 'Belum mengisi',
+  }));
+
+const handleExportHouseholdsExcel = () => {
+  const rows = getHouseholdExportRows();
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  worksheet['!cols'] = [
+    { wch: 14 },
+    { wch: 28 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 24 },
+    { wch: 14 },
+    { wch: 24 },
+    { wch: 20 },
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Warga');
+  XLSX.writeFile(
+    workbook,
+    `Data-Warga-Blok-H-${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
+};
+
+const handleExportHouseholdsPdf = () => {
+  const rows = getHouseholdExportRows();
+  const doc = new jsPDF({ orientation: 'landscape' });
+
+  doc.setFontSize(15);
+  doc.text('Data Warga Blok H - Living In Narama', 14, 15);
+  doc.setFontSize(9);
+  doc.text(
+    `Tanggal ekspor: ${new Date().toLocaleDateString('id-ID')} | Total: ${rows.length} data`,
+    14,
+    22
+  );
+
+  autoTable(doc, {
+    startY: 28,
+    head: [[
+      'No. Rumah',
+      'Nama Warga',
+      'No. HP',
+      'Hunian',
+      'Anggota',
+      'Aktif',
+      'Kongsi Kematian',
+      'Sensus Blok H',
+    ]],
+    body: rows.map((r) => [
+      r['No. Rumah'],
+      r['Nama Warga'],
+      r['Nomor HP'],
+      r['Status Hunian'],
+      r['Jumlah Anggota Keluarga'],
+      r['Status Aktif'],
+      r['Kongsi Kematian'],
+      r['Sensus Blok H'],
+    ]),
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    headStyles: { fillColor: [6, 78, 59] },
+    margin: { left: 10, right: 10 },
+  });
+
+  doc.save(
+    `Data-Warga-Blok-H-${new Date().toISOString().slice(0, 10)}.pdf`
+  );
+};
+
+<div className="flex flex-wrap items-center justify-between gap-3">
+  <p className="text-xs text-slate-500">
+    Menampilkan <strong>{filteredHouseholds.length}</strong> dari{' '}
+    <strong>{households.length}</strong> data warga.
+  </p>
+
+  <div className="flex flex-wrap gap-2">
+    <button
+      type="button"
+      onClick={handleExportHouseholdsExcel}
+      disabled={filteredHouseholds.length === 0}
+      className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-40"
+    >
+      Export Excel
+    </button>
+
+    <button
+      type="button"
+      onClick={handleExportHouseholdsPdf}
+      disabled={filteredHouseholds.length === 0}
+      className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
+    >
+      Export PDF
+    </button>
+
+    <button
+      type="button"
+      onClick={() => {
+        setHouseholdSearch('');
+        setFilterOccupancy('semua');
+        setFilterActive('semua');
+        setFilterKongsi('semua');
+        setFilterSensus('semua');
+      }}
+      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+    >
+      Reset Filter
+    </button>
+  </div>
+</div>
 
 const activeHouseholds = households.filter((h) => h.isActive);
 const huniCount = activeHouseholds.filter(
@@ -2178,6 +2341,93 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
       />
     </div>
 
+    
+{/* Filter Data Warga */}
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+  <div>
+    <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+      Status Hunian
+    </label>
+    <select
+      value={filterOccupancy}
+      onChange={(e) => setFilterOccupancy(e.target.value)}
+      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs"
+    >
+      <option value="semua">Semua Status Hunian</option>
+      <option value="huni">Huni</option>
+      <option value="semi-huni">Semi Huni</option>
+      <option value="kosong">Kosong</option>
+    </select>
+  </div>
+
+  <div>
+    <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+      Status Aktif
+    </label>
+    <select
+      value={filterActive}
+      onChange={(e) => setFilterActive(e.target.value)}
+      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs"
+    >
+      <option value="semua">Semua Status</option>
+      <option value="aktif">Aktif</option>
+      <option value="nonaktif">Nonaktif</option>
+    </select>
+  </div>
+
+  <div>
+    <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+      Kongsi Kematian
+    </label>
+    <select
+      value={filterKongsi}
+      onChange={(e) => setFilterKongsi(e.target.value)}
+      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs"
+    >
+      <option value="semua">Semua Status Kongsi</option>
+      <option value="terdaftar">Terdaftar</option>
+      <option value="tidak_terdaftar">Tidak Terdaftar</option>
+      <option value="belum_diverifikasi">Belum Diverifikasi</option>
+    </select>
+  </div>
+
+  <div>
+    <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+      Sensus Blok H
+    </label>
+    <select
+      value={filterSensus}
+      onChange={(e) => setFilterSensus(e.target.value)}
+      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs"
+    >
+      <option value="semua">Semua Status Sensus</option>
+      <option value="sudah_mengisi">Sudah Mengisi</option>
+      <option value="belum_mengisi">Belum Mengisi</option>
+    </select>
+  </div>
+</div>
+
+<div className="flex flex-wrap items-center justify-between gap-3">
+  <p className="text-xs text-slate-500">
+    Menampilkan <strong>{filteredHouseholds.length}</strong> dari{' '}
+    <strong>{households.length}</strong> data warga.
+  </p>
+
+  <button
+    type="button"
+    onClick={() => {
+      setHouseholdSearch('');
+      setFilterOccupancy('semua');
+      setFilterActive('semua');
+      setFilterKongsi('semua');
+      setFilterSensus('semua');
+    }}
+    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+  >
+    Reset Filter
+  </button>
+</div>
+
     {/* Table */}
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
       <div className="overflow-x-auto">
@@ -2318,31 +2568,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                         : 'Belum mengisi'}
                     </span>
                   )}
-                </td>
-                <td className="px-4 py-3">
-                  <select
-                    value={household.sensusStatus ?? 'belum_mengisi'}
-                    disabled={savingHouseholdStatus === `${household.id}-sensusStatus`}
-                    onChange={(e) =>
-                      handleUpdateHouseholdStatus(
-                        household,
-                        'sensusStatus',
-                        e.target.value as Household['sensusStatus']
-                      )
-                    }
-                    className="w-full min-w-[150px] rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] text-slate-700 disabled:opacity-50"
-                  >
-                    <option value="belum_mengisi">Belum mengisi</option>
-                    <option value="sudah_mengisi">Sudah mengisi</option>
-                  </select>
-
-                  {savingHouseholdStatus === `${household.id}-sensusStatus` && (
-                    <p className="mt-1 text-[10px] text-emerald-700">
-                      Menyimpan...
-                    </p>
-                  )}
-                </td>
-
+                </td> 
                {/* Aksi */}
                 <td className="px-4 py-3">
                   {canManage && (
