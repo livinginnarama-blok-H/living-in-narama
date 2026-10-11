@@ -192,7 +192,7 @@ export type AgendaItem = EventAgenda;
  * ==========================================================
  */
 
-export type CommunityGroupCategory = 'atlet' | 'gamers';
+export type CommunityGroupCategory = 'atlet' | 'gamers' | 'umum';
 
 export interface CommunityGroup {
   id: string;

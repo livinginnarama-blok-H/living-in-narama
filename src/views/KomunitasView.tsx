@@ -7,6 +7,7 @@ import {
   MessageCircle,
   Trophy,
   Users,
+  Info,
 } from 'lucide-react';
 
 import {
@@ -77,6 +78,11 @@ const KomunitasView: React.FC<KomunitasViewProps> = ({ isAdmin }) => {
     () => groups.filter((group) => group.category === 'gamers'),
     [groups]
   );
+  
+    const umumGroups = useMemo(
+    () => groups.filter((group) => group.category === 'umum'),
+    [groups]
+  );
 
   const openWhatsApp = (url?: string | null) => {
     if (!url) return;
@@ -97,8 +103,10 @@ const KomunitasView: React.FC<KomunitasViewProps> = ({ isAdmin }) => {
           <div className="flex h-52 w-full items-center justify-center bg-slate-100">
             {group.category === 'atlet' ? (
               <Users className="h-14 w-14 text-slate-300" />
-            ) : (
+            ) : group.category === 'gamers' ? (
               <Gamepad2 className="h-14 w-14 text-slate-300" />
+            ) : (
+              <Info className="h-14 w-14 text-slate-300" />
             )}
           </div>
         )}
@@ -110,7 +118,7 @@ const KomunitasView: React.FC<KomunitasViewProps> = ({ isAdmin }) => {
             </h3>
 
             <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold capitalize text-emerald-700">
-              {group.category}
+              {group.category === 'umum' ? 'Umum' : group.category}
             </span>
           </div>
 
@@ -269,7 +277,37 @@ const KomunitasView: React.FC<KomunitasViewProps> = ({ isAdmin }) => {
                 </p>
               </div>
             </div>
+            {/* Umum */}
+            <section>
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+                  <Info className="h-5 w-5" />
+                </div>
 
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">
+                    Umum Blok H
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Informasi komunitas dan kelompok warga di luar kategori olahraga dan gaming.
+                  </p>
+                </div>
+              </div>
+
+              {umumGroups.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {umumGroups.map((group) => (
+                    <GroupCard key={group.id} group={group} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={<Info className="h-5 w-5" />}
+                  title="Belum ada komunitas umum"
+                  description="Informasi komunitas umum Blok H akan ditampilkan di sini."
+                />
+              )}
+            </section>
             {gamersGroups.length > 0 ? (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {gamersGroups.map((group) => (
