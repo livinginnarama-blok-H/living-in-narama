@@ -61,6 +61,7 @@ useEffect(() => {
 const [activeTab, setActiveTab] = useState<TabKey>(getTabFromPath());
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<AdminRole | null>(null);
+  const [adminName, setAdminName] = useState('Admin Blok H');
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isCheckReportOpen, setIsCheckReportOpen] = useState(false);
@@ -78,11 +79,29 @@ const [activeTab, setActiveTab] = useState<TabKey>(getTabFromPath());
     AuthService.initialize();
 
     const unsubscribe = AuthService.subscribe((session) => {
-      setIsAuthenticated(session.isAuthenticated);
-      setUserRole(
-        session.isAuthenticated ? session.user?.role ?? null : null
-      );
-    });
+  setIsAuthenticated(session.isAuthenticated);
+  setUserRole(
+    session.isAuthenticated ? session.user?.role ?? null : null
+  );
+
+  const name = session.isAuthenticated
+    ? session.user?.name || session.user?.username
+    : null;
+
+  const emailPrefix = name?.includes('@')
+    ? name.split('@')[0]
+    : name;
+
+  const formattedName = emailPrefix
+    ? emailPrefix
+        .split(/[._-]+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ')
+    : 'Admin Blok H';
+
+  setAdminName(formattedName);
+});
 
     const cleanupAuthListener = AuthService.setupAuthListener();
 
@@ -135,6 +154,7 @@ setActiveTab('beranda');
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
         isAdmin={isAuthenticated}
+        adminName={adminName}
         onLogoutAdmin={handleLogout}
         onOpenEmergency={() => setIsEmergencyOpen(true)}
         onOpenReport={() => setIsReportOpen(true)}

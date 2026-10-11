@@ -6,6 +6,7 @@ interface HeaderNavProps {
   activeTab: TabKey;
   onSelectTab: (tab: TabKey) => void;
   isAdmin: boolean;
+  adminName: string;
   onLogoutAdmin: () => void;
   onOpenEmergency: () => void;
   onOpenReport: () => void;
@@ -15,6 +16,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   activeTab,
   onSelectTab,
   isAdmin,
+  adminName,
   onLogoutAdmin,
   onOpenEmergency,
   onOpenReport,
@@ -135,7 +137,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
                   className="px-2 py-1 text-xs font-semibold text-emerald-900 flex items-center gap-1 hover:text-emerald-950"
                 >
                   <UserCheck className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Admin Blok H</span>
+                  <span>{adminName}</span>
                 </button>
                 <button
                   onClick={onLogoutAdmin}
