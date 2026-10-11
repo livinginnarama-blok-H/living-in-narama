@@ -1464,48 +1464,6 @@ const handleExportHouseholdsPdf = () => {
     `Data-Warga-Blok-H-${new Date().toISOString().slice(0, 10)}.pdf`
   );
 };
-
-<div className="flex flex-wrap items-center justify-between gap-3">
-  <p className="text-xs text-slate-500">
-    Menampilkan <strong>{filteredHouseholds.length}</strong> dari{' '}
-    <strong>{households.length}</strong> data warga.
-  </p>
-
-  <div className="flex flex-wrap gap-2">
-    <button
-      type="button"
-      onClick={handleExportHouseholdsExcel}
-      disabled={filteredHouseholds.length === 0}
-      className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-40"
-    >
-      Export Excel
-    </button>
-
-    <button
-      type="button"
-      onClick={handleExportHouseholdsPdf}
-      disabled={filteredHouseholds.length === 0}
-      className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
-    >
-      Export PDF
-    </button>
-
-    <button
-      type="button"
-      onClick={() => {
-        setHouseholdSearch('');
-        setFilterOccupancy('semua');
-        setFilterActive('semua');
-        setFilterKongsi('semua');
-        setFilterSensus('semua');
-      }}
-      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-    >
-      Reset Filter
-    </button>
-  </div>
-</div>
-
 const activeHouseholds = households.filter((h) => h.isActive);
 const huniCount = activeHouseholds.filter(
   (h) => h.occupancyStatus === 'huni'
@@ -2407,26 +2365,48 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
   </div>
 </div>
 
+
 <div className="flex flex-wrap items-center justify-between gap-3">
   <p className="text-xs text-slate-500">
     Menampilkan <strong>{filteredHouseholds.length}</strong> dari{' '}
     <strong>{households.length}</strong> data warga.
   </p>
 
-  <button
-    type="button"
-    onClick={() => {
-      setHouseholdSearch('');
-      setFilterOccupancy('semua');
-      setFilterActive('semua');
-      setFilterKongsi('semua');
-      setFilterSensus('semua');
-    }}
-    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-  >
-    Reset Filter
-  </button>
+  <div className="flex flex-wrap gap-2">
+    <button
+      type="button"
+      onClick={handleExportHouseholdsExcel}
+      disabled={filteredHouseholds.length === 0}
+      className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-40"
+    >
+      Export Excel
+    </button>
+
+    <button
+      type="button"
+      onClick={handleExportHouseholdsPdf}
+      disabled={filteredHouseholds.length === 0}
+      className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
+    >
+      Export PDF
+    </button>
+
+    <button
+      type="button"
+      onClick={() => {
+        setHouseholdSearch('');
+        setFilterOccupancy('semua');
+        setFilterActive('semua');
+        setFilterKongsi('semua');
+        setFilterSensus('semua');
+      }}
+      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+    >
+      Reset Filter
+    </button>
+  </div>
 </div>
+
 
     {/* Table */}
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
