@@ -152,10 +152,18 @@ async function buildSession(): Promise<AuthSession> {
     }
   }
 
+  
+  const metadata = user.user_metadata ?? {}
+
   const adminUser: AdminUser = {
     id: user.id,
     username: user.email || '',
-    name: profile.full_name || user.email || 'Pengguna',
+    name:
+      metadata.display_name ||
+      metadata.full_name ||
+      profile.full_name ||
+      user.email ||
+      'Pengguna',
     role: profile.role as AdminUser['role'],
     isDemo: false,
   }
