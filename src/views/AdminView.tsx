@@ -3475,7 +3475,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                     >
                       <option value="atlet">Atlet</option>
                       <option value="gamers">Gamers</option>
-                      <option value="gamers">Gamers</option>
+                      <option value="umum">Umum</option>
                     </select>
                   </div>
                 </div>
