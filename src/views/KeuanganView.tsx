@@ -16,6 +16,7 @@ import {
   DEFAULT_MONTHLY_IPL_FEE,
 } from '../services/dataService';
 import { AuthService } from '../services/authService';
+import { supabase } from '../lib/supabase';
 import {
   Wallet,
   ArrowDownLeft,
@@ -64,29 +65,124 @@ export const KeuanganView: React.FC<KeuanganViewProps> = ({ isAdmin }) => {
   // Financial transactions & summary metrics from DataService (Single Source of Truth)
   const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
 
-useEffect(() => {
-  let cancelled = false;
 
-  const loadTransactions = async () => {
-    try {
-      const data = await DataService.fetchTransactions(true);
+  useEffect(() => {
+    let cancelled = false;
 
-      if (!cancelled) {
+    const loadTransactions = async () => {
+      try {
+        let data: FinanceTransaction[];
+
+        if (isAdmin) {
+          data = await DataService.fetchTransactions(true);
+        } else {
+          const { data: rpcData, error } = await supabase.rpc(
+            'get_public_cash_transactions'
+          );
+
+          if (error) throw error;
+
+          const rows = Array.isArray(rpcData)
+            ? (rpcData as unknown as Record<string, unknown>[])
+            : [];
+
+          data = rows.map((row) => ({
+            id: String(row.id ?? ''),
+            date: String(row.date ?? ''),
+            type: row.type === 'out' ? 'out' : 'in',
+            category: String(row.category ?? 'lainnya'),
+            description: String(row.description ?? 'Transaksi kas'),
+            amount: Math.max(0, Number(row.amount) || 0),
+            receiptNumber: row.receipt_number
+              ? String(row.receipt_number)
+              : undefined,
+            paymentMethod: row.payment_method
+              ? String(row.payment_method)
+              : 'transfer_bank',
+            status: 'active',
+          })) as FinanceTransaction[];
+        }
+
+        if (cancelled) return;
+
         setTransactions(data);
-        setAvailableMonths(DataService.getAvailableTransactionMonths());
-        setMetrics(DataService.getFinancialMetrics(periodFilter));
+
+        const publicMonths = Array.from(
+          new Set(data.map((tx) => String(tx.date).slice(0, 7)))
+        )
+          .filter((month) => /^\d{4}-\d{2}$/.test(month))
+          .sort()
+          .reverse();
+
+        setAvailableMonths(
+          isAdmin
+            ? DataService.getAvailableTransactionMonths()
+            : publicMonths
+        );
+
+        if (isAdmin) {
+          setMetrics(DataService.getFinancialMetrics(periodFilter));
+        } else {
+          const activeRows = data.filter((tx) => tx.status !== 'void');
+
+          const totalIn = activeRows
+            .filter((tx) => tx.type === 'in')
+            .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+          const totalOut = activeRows
+            .filter((tx) => tx.type === 'out')
+            .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+          const monthPrefix =
+            periodFilter.type === 'current_month'
+              ? getCurrentSystemMonth()
+              : periodFilter.type === 'custom_month' &&
+                  periodFilter.month
+                ? periodFilter.month
+                : null;
+
+          const periodRows = monthPrefix
+            ? activeRows.filter((tx) =>
+                String(tx.date).startsWith(monthPrefix)
+              )
+            : activeRows;
+
+          const currentMonthIn = periodRows
+            .filter((tx) => tx.type === 'in')
+            .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+          const currentMonthOut = periodRows
+            .filter((tx) => tx.type === 'out')
+            .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+          const baseMetrics =
+            DataService.getFinancialMetrics(periodFilter);
+
+          setMetrics({
+            ...baseMetrics,
+            openingBalance: 0,
+            currentBalance: totalIn - totalOut,
+            currentMonthIn,
+            currentMonthOut,
+            totalIn,
+            totalOut,
+            isDemo: false,
+          });
+        }
+      } catch (error) {
+        console.error(
+          '[KeuanganView] Gagal memuat transaksi:',
+          error
+        );
       }
-    } catch (error) {
-      console.error('[KeuanganView] Gagal memuat transaksi:', error);
-    }
-  };
+    };
 
-  loadTransactions();
+    void loadTransactions();
 
-  return () => {
-    cancelled = true;
-  };
-}, [periodFilter]);
+    return () => {
+      cancelled = true;
+    };
+  }, [periodFilter, isAdmin]);
 
   const [metrics, setMetrics] = useState<FinancialSummary>(() =>
     DataService.getFinancialMetrics(periodFilter)
@@ -113,6 +209,7 @@ useEffect(() => {
 
   // Subscribe to centralized DataService
   useEffect(() => {
+    if (!isAdmin) return;
   let cancelled = false;
 
   const loadHouseholds = async () => {
@@ -169,11 +266,13 @@ useEffect(() => {
     cancelled = true;
     unsubscribe();
   };
-}, [periodFilter]);
+}, [periodFilter, isAdmin]);
   // Recalculate metrics when period filter changes
   useEffect(() => {
+  if (isAdmin) {
     setMetrics(DataService.getFinancialMetrics(periodFilter));
-  }, [periodFilter]);
+  }
+}, [periodFilter, isAdmin]);
 
   // Admin Add Transaction Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
