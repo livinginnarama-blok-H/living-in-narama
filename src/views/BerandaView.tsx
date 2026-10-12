@@ -36,11 +36,13 @@ interface PublicDashboardSummary {
   sensus_completed: number;
   current_balance: number;
 }
-interface PublicDashboardSummary {
+interface PublicHouseholdCounts {
+  total_households: number;
   active_households: number;
-  kongsi_registered: number;
-  sensus_completed: number;
-  current_balance: number;
+  inactive_households: number;
+  huni_count: number;
+  semi_huni_count: number;
+  kosong_count: number;
 }
 interface BerandaViewProps {
   onSelectTab: (tab: TabKey) => void;
@@ -66,6 +68,21 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
     useState<PublicDashboardSummary | null>(null);
   const [publicSummaryError, setPublicSummaryError] =
     useState(false);
+  const [publicHouseholdCounts, setPublicHouseholdCounts] =
+  useState<PublicHouseholdCounts | null>(null);
+const [publicHouseholdCountsError, setPublicHouseholdCountsError] =
+  useState(false);
+  const lastFinanceUpdateLabel = lastFinanceUpdate
+  ? `${new Intl.DateTimeFormat('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Jakarta',
+    }).format(new Date(lastFinanceUpdate))} WIB`
+  : 'Belum ada transaksi tercatat';
 
   
   // Centralized DataService Subscription
@@ -107,30 +124,6 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
 
 if (!cancelled) {
   setMetrics(DataService.getFinancialMetrics());
-
-  const transactions = DataService.getTransactions(true);
-
-  const latestTransaction = transactions
-    .filter((transaction) => transaction.type === 'in' || transaction.type === 'out')
-    .reduce<FinancialTransaction | null>((latest, transaction) => {
-      const transactionTime = new Date(
-        transaction.updatedAt || transaction.createdAt || transaction.date
-      ).getTime();
-
-      if (!latest) return transaction;
-
-      const latestTime = new Date(
-        latest.updatedAt || latest.createdAt || latest.date
-      ).getTime();
-
-      return transactionTime > latestTime ? transaction : latest;
-    }, null);
-
-  setLastFinanceUpdate(
-    latestTransaction?.updatedAt ||
-    latestTransaction?.createdAt ||
-    null
-  );
 }
     } catch (error) {
       console.error('[BerandaView] Gagal memuat transaksi keuangan:', error);
@@ -146,6 +139,43 @@ if (!cancelled) {
       console.error('[BerandaView] Gagal memuat data rumah warga:', error);
     }
   };
+  const loadPublicHouseholdCounts = async () => {
+  try {
+    const { data, error } = await supabase.rpc(
+      'get_public_household_counts'
+    );
+
+    if (error) throw error;
+
+    const counts = Array.isArray(data) ? data[0] : data;
+
+    if (!counts) {
+      throw new Error('Jumlah unit rumah tidak tersedia.');
+    }
+
+    if (!cancelled) {
+      setPublicHouseholdCounts({
+        total_households: Number(counts.total_households),
+        active_households: Number(counts.active_households),
+        inactive_households: Number(counts.inactive_households),
+        huni_count: Number(counts.huni_count),
+        semi_huni_count: Number(counts.semi_huni_count),
+        kosong_count: Number(counts.kosong_count),
+      });
+
+      setPublicHouseholdCountsError(false);
+    }
+  } catch (error) {
+    console.error(
+      '[BerandaView] Gagal memuat jumlah unit rumah:',
+      error
+    );
+
+    if (!cancelled) {
+      setPublicHouseholdCountsError(true);
+    }
+  }
+};
    const loadPublicSummary = async () => {
     try {
       const { data, error } = await supabase.rpc(
@@ -159,7 +189,23 @@ if (!cancelled) {
       if (!summary) {
         throw new Error('Ringkasan publik tidak tersedia');
       }
+      try {
+        const { data: latestTransactionAt, error: latestAtError } =
+          await supabase.rpc('get_public_latest_financial_transaction_at');
 
+        if (latestAtError) throw latestAtError;
+
+        if (!cancelled) {
+          setLastFinanceUpdate(
+            latestTransactionAt ? String(latestTransactionAt) : null
+          );
+        }
+      } catch (timestampError) {
+        console.error(
+          '[BerandaView] Gagal memuat waktu transaksi terakhir:',
+          timestampError
+        );
+      }
       if (!cancelled) {
         setPublicSummary({
           active_households: Number(summary.active_households),
@@ -181,7 +227,8 @@ if (!cancelled) {
     }
   };
 loadPublicSummary();
-  loadData();
+loadPublicHouseholdCounts();
+loadData();
 
   const unsubscribe = DataService.subscribe(() => {
     if (cancelled) return;
@@ -197,19 +244,6 @@ loadPublicSummary();
   };
 }, []);
 const activeHouseholds = households.filter((h) => h.isActive);
-
-const huniCount = activeHouseholds.filter(
-  (h) => h.occupancyStatus === 'huni'
-).length;
-
-const semiHuniCount = activeHouseholds.filter(
-  (h) => h.occupancyStatus === 'semi-huni'
-).length;
-
-const kosongCount = activeHouseholds.filter(
-  (h) => h.occupancyStatus === 'kosong'
-).length;
-
 const kongsiTerdaftarCount = activeHouseholds.filter(
 (h) => h.kongsiStatus === 'terdaftar'
 ).length;
@@ -333,52 +367,90 @@ const upcomingAgendas = agendas
   {/* Mountain Highlight Bar */}
 
 <div className="relative z-10 bg-emerald-900/80 backdrop-blur-md border-t border-emerald-800/60 px-6 py-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 text-xs">
-  <div>
-    <span className="block text-emerald-300 text-[11px] font-medium">Unit Hunian Warga</span>
-    <span className="text-sm sm:text-base font-bold text-white">
-        {publicSummary
-        ? `${publicSummary.active_households} Unit Terdata`
+    <div>
+    <span className="block text-emerald-300 text-[11px] font-medium">
+      Total Unit Rumah Blok H
+    </span>
+
+    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
+      {publicHouseholdCounts
+        ? `${publicHouseholdCounts.total_households} Unit Terdata`
+        : publicHouseholdCountsError
+          ? 'Data tidak tersedia'
+          : 'Memuat data...'}
+    </span>
+
+    {publicHouseholdCounts && (
+      <>
+        <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
+          Aktif: {publicHouseholdCounts.active_households}
+          {' | '}
+          Nonaktif: {publicHouseholdCounts.inactive_households}
+        </span>
+
+        <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
+          Huni: {publicHouseholdCounts.huni_count}
+          {' / '}
+          Semi Huni: {publicHouseholdCounts.semi_huni_count}
+          {' / '}
+          Kosong: {publicHouseholdCounts.kosong_count}
+        </span>
+      </>
+    )}
+  </div>
+
+    <div>
+    <span className="block text-emerald-300 text-[11px] font-medium">
+      Kongsi Kematian Terdaftar
+    </span>
+
+    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
+      {publicSummary
+        ? `${publicSummary.kongsi_registered} Rumah/KK`
         : publicSummaryError
           ? 'Data tidak tersedia'
           : 'Memuat data...'}
     </span>
-    {activeHouseholds.length > 0 && (
-      <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
-        {huniCount} Huni · {semiHuniCount} Semi Huni · {kosongCount} Kosong
-      </span>
-    )}
-  </div>
 
-  <div>
-    <span className="block text-emerald-300 text-[11px] font-medium">Kongsi Kematian Terdaftar</span>
-    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
-      {publicSummary
-  ? `${publicSummary.kongsi_registered} Rumah/KK`
-  : publicSummaryError
-    ? 'Data tidak tersedia'
-    : 'Memuat data...'}
-    </span>
     <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
       Data kepesertaan Kongsi Kematian
     </span>
-  </div>
 
-  <div>
-    <span className="block text-emerald-300 text-[11px] font-medium">Sensus Blok H</span>
-    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
-      {publicSummary
-  ? `${publicSummary.sensus_completed} Rumah/KK`
-  : publicSummaryError
-    ? 'Data tidak tersedia'
-    : 'Memuat data...'}
-    </span>
-    <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
-      Rumah/KK sudah mengisi sensus
+    <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/70 font-medium">
+      {publicHouseholdCounts
+        ? `Dari ${publicHouseholdCounts.active_households} rumah aktif`
+        : 'Cakupan rumah aktif Blok H'}
     </span>
   </div>
 
     <div>
-    <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas</span>
+    <span className="block text-emerald-300 text-[11px] font-medium">
+      Sensus Blok H
+    </span>
+
+    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
+      {publicSummary
+        ? `${publicSummary.sensus_completed} Rumah/KK`
+        : publicSummaryError
+          ? 'Data tidak tersedia'
+          : 'Memuat data...'}
+    </span>
+
+    <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
+      Rumah/KK sudah mengisi sensus
+    </span>
+
+    <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/70 font-medium">
+      {publicHouseholdCounts
+        ? `Dari ${publicHouseholdCounts.active_households} rumah aktif`
+        : 'Cakupan rumah aktif Blok H'}
+    </span>
+  </div>
+
+    <div>
+    <span className="block text-emerald-300 text-[11px] font-medium">
+      Saldo Kas Blok H
+    </span>
     <span className="text-sm sm:text-base font-bold text-white tabular-nums">
       {publicSummary
   ? formatCurrency(publicSummary.current_balance)
@@ -398,6 +470,9 @@ const upcomingAgendas = agendas
         })} WIB
       </span>
     )}
+    <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/70 font-medium">
+  Berdasarkan transaksi aktif
+</span>
   </div>  
 </div>
       </section>
@@ -541,27 +616,17 @@ const upcomingAgendas = agendas
             <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-100 space-y-1">
               <span className="text-[11px] text-emerald-800 font-medium">Saldo Kas Aktif</span>
               <p className="text-xl font-extrabold text-emerald-950 tabular-nums">
-                {formatCurrency(metrics.currentBalance)}
-              </p>
-              <p className="text-[11px] text-emerald-700">
-                Pembaruan buku kas per {metrics.asOfDate}
-              </p>
+              {publicSummary
+                ? formatCurrency(publicSummary.current_balance)
+                : publicSummaryError
+                  ? 'Data tidak tersedia'
+                  : 'Memuat saldo...'}
+            </p>
+            <p className="text-[11px] text-emerald-700">
+              Transaksi terakhir: {lastFinanceUpdateLabel}
+            </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="text-[11px] text-slate-500 block">Pemasukan Bulan Ini</span>
-                <span className="font-bold text-emerald-700 tabular-nums">
-                  {formatCurrency(metrics.currentMonthIn)}
-                </span>
-              </div>
-              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="text-[11px] text-slate-500 block">Pengeluaran Bulan Ini</span>
-                <span className="font-bold text-rose-700 tabular-nums">
-                  {formatCurrency(metrics.currentMonthOut)}
-                </span>
-              </div>
-            </div>
           </div>
 
           <button

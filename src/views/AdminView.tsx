@@ -13,6 +13,7 @@ import {
 } from '../types/portal';
 import { DataService } from '../services/dataService';
 import { AuthService } from '../services/authService';
+import { supabase } from '../lib/supabase';
 import {
   Lock,
   UserCheck,
@@ -42,6 +43,11 @@ import {
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+type ScheduledKongsiChange = {
+  id: string;
+  status: NonNullable<Household['kongsiStatus']>;
+  effectiveFrom: string;
+};
 
 interface AdminViewProps {
   isAdmin: boolean;
@@ -127,6 +133,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [filterKongsi, setFilterKongsi] = useState('semua');
   const [filterSensus, setFilterSensus] = useState('semua');
   const [savingHouseholdStatus, setSavingHouseholdStatus] = useState<string | null>(null);
+  const [scheduledKongsiChanges, setScheduledKongsiChanges] =
+  useState<Record<string, ScheduledKongsiChange>>({});
   const [isHouseholdModalOpen, setIsHouseholdModalOpen] = useState(false);
   const [editingHousehold, setEditingHousehold] = useState<Household | null>(null);
   const [isSavingHousehold, setIsSavingHousehold] = useState(false);
@@ -213,6 +221,7 @@ const [organizationMemberError, setOrganizationMemberError] =
   const [residentName, setResidentName] = useState('');
   const [occupancyStatus, setOccupancyStatus] =
     useState<OccupancyStatus>('huni');
+  const [householdIsActive, setHouseholdIsActive] = useState(true);
   const [phone, setPhone] = useState('');
   const [familyMembers, setFamilyMembers] = useState('');
   const [householdNotes, setHouseholdNotes] = useState('');
@@ -248,7 +257,55 @@ const [organizationMemberPeriodEnd, setOrganizationMemberPeriodEnd] =
   useState('2029-12-31');
 const [organizationMemberIsActive, setOrganizationMemberIsActive] =
   useState(true);
+ useEffect(() => {
+  let cancelled = false;
 
+  const loadScheduledKongsiChanges = async () => {
+    const now = new Date();
+    const currentMonthStart =
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+    const { data, error } = await supabase
+      .from('household_status_history')
+      .select('id, household_id, kongsi_status, effective_from')
+      .eq('is_cancelled', false)
+      .gt('effective_from', currentMonthStart)
+      .order('effective_from', { ascending: true });
+
+    if (error) {
+      console.error(
+        '[AdminView] Gagal memuat jadwal status Kongsi:',
+        error
+      );
+      return;
+    }
+
+    const schedules: Record<string, ScheduledKongsiChange> = {};
+
+    (data ?? []).forEach((row) => {
+      const householdId = String(row.household_id);
+
+      // Gunakan jadwal mendatang yang paling awal untuk setiap rumah.
+      if (schedules[householdId]) return;
+
+      schedules[householdId] = {
+        id: String(row.id),
+        status: row.kongsi_status as NonNullable<Household['kongsiStatus']>,
+        effectiveFrom: row.effective_from,
+      };
+    });
+
+    if (!cancelled) {
+      setScheduledKongsiChanges(schedules);
+    }
+  };
+
+  void loadScheduledKongsiChanges();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
   // Reactive subscription to DataService
   useEffect(() => {
   let cancelled = false;
@@ -849,6 +906,7 @@ const deleteEmergencyContact = async (
   setHouseNumber('');
   setResidentName('');
   setOccupancyStatus('huni');
+  setHouseholdIsActive(true);
   setPhone('');
   setFamilyMembers('');
   setHouseholdNotes('');
@@ -866,6 +924,7 @@ const openEditHousehold = (household: Household) => {
   setHouseNumber(household.houseNumber);
   setResidentName(household.residentName);
   setOccupancyStatus(household.occupancyStatus);
+  setHouseholdIsActive(household.isActive);
   setPhone(household.phone || '');
   setFamilyMembers(
     household.familyMembers !== undefined
@@ -900,6 +959,7 @@ const handleSaveHousehold = async (e: React.FormEvent) => {
         houseNumber: houseNumber.trim(),
         residentName: residentName.trim(),
         occupancyStatus,
+        isActive: householdIsActive,
         phone: phone.trim() || undefined,
         familyMembers: familyMembers
           ? Number(familyMembers)
@@ -935,6 +995,7 @@ const handleSaveHousehold = async (e: React.FormEvent) => {
 };
 
 
+
 const handleUpdateHouseholdStatus = async (
   household: Household,
   field: 'kongsiStatus' | 'sensusStatus',
@@ -945,33 +1006,106 @@ const handleUpdateHouseholdStatus = async (
     return;
   }
 
-  const updatedHousehold: Household = {
-    ...household,
-    [field]: value,
-  };
-
   setSavingHouseholdStatus(`${household.id}-${field}`);
 
   try {
-    const savedHousehold = await DataService.updateHousehold(updatedHousehold);
+    if (field === 'kongsiStatus') {
+      const kongsiStatus =
+        value as NonNullable<Household['kongsiStatus']>;
 
-    setHouseholds((current) =>
-      current.map((item) =>
-        item.id === savedHousehold.id ? savedHousehold : item
-      )
-    );
+      const { data: historyId, error } = await supabase.rpc(
+        'set_household_kongsi_status_now',
+        {
+          p_household_id: household.id,
+          p_kongsi_status: kongsiStatus,
+          p_change_note:
+            'Verifikasi data awal melalui Admin Data Warga',
+        }
+      );
+
+      if (error) throw error;
+
+      if (!historyId) {
+        throw new Error('ID riwayat verifikasi tidak diterima.');
+      }
+
+      // Perbarui tampilan lokal segera setelah RPC berhasil.
+      setHouseholds((current) =>
+        current.map((item) =>
+          item.id === household.id
+            ? { ...item, kongsiStatus }
+            : item
+        )
+      );
+
+      // Muat ulang agar status mengikuti riwayat efektif Supabase.
+      try {
+        const refreshedHouseholds = await DataService.fetchHouseholds();
+        setHouseholds(refreshedHouseholds);
+      } catch (reloadError) {
+        console.error(
+          '[AdminView] Verifikasi berhasil, tetapi data rumah gagal dimuat ulang:',
+          reloadError
+        );
+      }
+
+      const statusLabels: Record<
+        NonNullable<Household['kongsiStatus']>,
+        string
+      > = {
+        belum_diverifikasi: 'Belum Diverifikasi',
+        terdaftar: 'Terdaftar',
+        tidak_terdaftar: 'Tidak Terdaftar',
+      };
+
+      const currentMonthLabel = new Intl.DateTimeFormat('id-ID', {
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'Asia/Jakarta',
+      }).format(new Date());
+
+      window.alert(
+        `Status Kongsi rumah ${household.houseNumber} berhasil diverifikasi menjadi ` +
+          `"${statusLabels[kongsiStatus]}". ` +
+          `Status langsung berlaku untuk periode ${currentMonthLabel}. ` +
+          'Nominal pembayaran IPL yang sudah tersimpan tidak diubah otomatis.'
+      );
+    } else {
+      // Status Sensus tetap menggunakan metode penyimpanan sebelumnya.
+      const updatedHousehold: Household = {
+        ...household,
+        sensusStatus: value as Household['sensusStatus'],
+      };
+
+      const savedHousehold =
+        await DataService.updateHousehold(updatedHousehold);
+
+      setHouseholds((current) =>
+        current.map((item) =>
+          item.id === savedHousehold.id ? savedHousehold : item
+        )
+      );
+    }
   } catch (err) {
-    alert(
+    window.alert(
       err instanceof Error
         ? `Gagal menyimpan status: ${err.message}`
         : 'Gagal menyimpan status warga.'
     );
 
-    setHouseholds(await DataService.fetchHouseholds());
+    try {
+      setHouseholds(await DataService.fetchHouseholds());
+    } catch (reloadError) {
+      console.error(
+        '[AdminView] Gagal memuat ulang data rumah:',
+        reloadError
+      );
+    }
   } finally {
     setSavingHouseholdStatus(null);
   }
 };
+
 
 const handleSaveCommunityGroup = async (
   e: React.FormEvent
@@ -1471,7 +1605,7 @@ const huniCount = activeHouseholds.filter(
 const semiHuniCount = activeHouseholds.filter(
   (h) => h.occupancyStatus === 'semi-huni'
 ).length;
-const kosongCount = activeHouseholds.filter(
+const kosongCount = households.filter(
   (h) => h.occupancyStatus === 'kosong'
 ).length;
 
@@ -1913,7 +2047,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
         }`}
       >
         <Users className="w-3.5 h-3.5" />
-        <span>Data Warga ({activeHouseholds.length})</span>
+        <span>Data Warga ({households.length})</span>
       </button>
 <button
   onClick={() => setAdminTab(adminTab === 'pengurus' ? null : 'pengurus')}
@@ -2489,6 +2623,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                 {/* Status Kongsi Kematian */}
                 <td className="px-4 py-3">
                   {canManage ? (
+                    <>
                     <select
                       value={household.kongsiStatus ?? 'belum_diverifikasi'}
                       disabled={savingHouseholdStatus === `${household.id}-kongsiStatus`}
@@ -2505,6 +2640,31 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                       <option value="terdaftar">Terdaftar</option>
                       <option value="tidak_terdaftar">Tidak terdaftar</option>
                     </select>
+                    {scheduledKongsiChanges[household.id] && (
+                    <p className="mt-1 text-[10px] text-amber-700">
+                      Jadwal berikutnya:{' '}
+                      {scheduledKongsiChanges[household.id].status === 'terdaftar'
+                        ? 'Terdaftar'
+                        : scheduledKongsiChanges[household.id].status === 'tidak_terdaftar'
+                          ? 'Tidak Terdaftar'
+                          : 'Belum Diverifikasi'}
+                      {' mulai '}
+                      {new Date(
+                        `${scheduledKongsiChanges[household.id].effectiveFrom}T12:00:00+07:00`
+                      ).toLocaleDateString('id-ID', {
+                        month: 'long',
+                        year: 'numeric',
+                        timeZone: 'Asia/Jakarta',
+                      })}
+                      . Status saat ini:{' '}
+                      {household.kongsiStatus === 'terdaftar'
+                        ? 'Terdaftar'
+                        : household.kongsiStatus === 'tidak_terdaftar'
+                          ? 'Tidak Terdaftar'
+                          : 'Belum Diverifikasi'}
+                    </p>
+                  )}
+                  </>
                   ) : (
                     <span className="text-[11px] text-slate-700">
                       {household.kongsiStatus === 'terdaftar'
@@ -2656,8 +2816,7 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
             className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-700"
           />
         </div>
-
-        <div>
+          <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
             Status Tinggal *
           </label>
@@ -2676,6 +2835,30 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
             <option value="kosong">Kosong</option>
           </select>
         </div>
+          {editingHousehold && (
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Status Rumah *
+            </label>
+
+            <select
+              required
+              value={householdIsActive ? 'aktif' : 'nonaktif'}
+              onChange={(e) =>
+                setHouseholdIsActive(e.target.value === 'aktif')
+              }
+              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-emerald-700"
+            >
+              <option value="aktif">Aktif</option>
+              <option value="nonaktif">Nonaktif</option>
+            </select>
+
+            <p className="text-[10px] text-slate-500 mt-1">
+              Rumah nonaktif tidak dimasukkan ke rekap iuran aktif.
+              Riwayat pembayaran dan transaksi sebelumnya tetap tersimpan.
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>

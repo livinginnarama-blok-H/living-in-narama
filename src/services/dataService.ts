@@ -1,6 +1,6 @@
 /**
  * Centralized Data Service for Portal Warga Griya Adika Narama - Blok H
- * 
+ *
  * ARCHITECTURE OVERVIEW:
  * 1. Single Source of Truth: All UI views interact ONLY with this service (never directly with localStorage or raw endpoints).
  * 2. Strict Dual Mode Isolation:
@@ -84,6 +84,34 @@ const getIPLFeeByOccupancyStatus = (
   }
 
   return IPL_FEE_HUNI;
+};
+
+export const KONGSI_MONTHLY_FEE = 10000;
+
+export const getMonthlyIPLAmount = (
+  household: Pick<Household, 'occupancyStatus' | 'kongsiStatus'>
+): number | null => {
+  let iplFee: number;
+
+  if (household.occupancyStatus === 'huni') {
+    iplFee = IPL_FEE_HUNI;
+  } else if (household.occupancyStatus === 'semi-huni') {
+    iplFee = IPL_FEE_SEMI_HUNI;
+  } else {
+    // Tarif rumah kosong belum ditetapkan.
+    return null;
+  }
+
+  if (household.kongsiStatus === 'terdaftar') {
+    return iplFee + KONGSI_MONTHLY_FEE;
+  }
+
+  if (household.kongsiStatus === 'tidak_terdaftar') {
+    return iplFee;
+  }
+
+  // Status Kongsi belum terverifikasi: jangan tentukan tarif otomatis.
+  return null;
 };
 // Storage keys for local mock demo persistence
 const STORAGE_KEYS = {
@@ -355,7 +383,7 @@ uploadOrganizationMemberPhoto(
   memberId: string,
   imageFile: File
 ): Promise<string>;
-  
+
   addOrganizationMember(
   item: Omit<OrganizationMember, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<OrganizationMember>;
@@ -480,9 +508,9 @@ fetchIPLRecap(period?: string): Promise<IPLRecap>;
   getReports(): CitizenReport[];
   fetchReports(): Promise<CitizenReport[]>;
   submitReport(report: Omit<CitizenReport, 'id' | 'date' | 'status' | 'createdAt' | 'reportNumber'>): Promise<CitizenReport>;
-  
+
   updateReportStatus(
-    
+
     id: string,
     status: CitizenReport['status'],
     note?: string
@@ -845,7 +873,7 @@ async updateAnnouncement(
         error.message || 'Gagal memuat data pengurus dari Supabase'
       );
     }
-    
+
     const members: OrganizationMember[] = (data || []).map((item) => ({
       id: item.id,
       name: item.name,
@@ -1167,7 +1195,7 @@ async updateAnnouncement(
       updatedAt: data.updated_at,
     };
 
-    
+
     return group;
   },
 
@@ -1188,7 +1216,7 @@ async updateAnnouncement(
       );
     }
 
-    
+
   },
 
   async uploadCommunityGroupPhoto(
@@ -1299,7 +1327,7 @@ async updateAnnouncement(
       updatedAt: data.updated_at,
     };
 
-    
+
     return achievement;
   },
 
@@ -1360,7 +1388,7 @@ async updateAnnouncement(
       updatedAt: data.updated_at,
     };
 
-    
+
     return achievement;
   },
 
@@ -1381,7 +1409,7 @@ async updateAnnouncement(
       );
     }
 
-   
+
   },
 
   async uploadCommunityAchievementPhoto(
@@ -1693,7 +1721,7 @@ async deleteOrganizationMember(
     emitDataChange();
   },
 
-  
+
     // ==========================================
 // 4. HOUSEHOLDS (DATA RUMAH WARGA)
 // ==========================================
@@ -1713,19 +1741,62 @@ async fetchHouseholds(): Promise<Household[]> {
     console.error('[DataService] Supabase fetchHouseholds error:', error);
     throw new Error(error.message || 'Gagal memuat data rumah warga');
   }
+    const effectivePeriodStart = `${getCurrentSystemMonth()}-01`;
 
+  const { data: statusHistoryRows, error: statusHistoryError } =
+    await supabase
+      .from('household_status_history')
+      .select(
+        'household_id, occupancy_status, kongsi_status, effective_from'
+      )
+      .eq('is_cancelled', false)
+      .lte('effective_from', effectivePeriodStart)
+      .order('effective_from', { ascending: true });
+
+  if (statusHistoryError) {
+    console.error(
+      '[DataService] Gagal memuat status efektif rumah:',
+      statusHistoryError
+    );
+    throw new Error(
+      statusHistoryError.message ||
+        'Gagal memuat riwayat status rumah yang berlaku saat ini.'
+    );
+  }
+
+  const latestStatusByHousehold = new Map<
+    string,
+    {
+      occupancyStatus: Household['occupancyStatus'];
+      kongsiStatus: NonNullable<Household['kongsiStatus']>;
+    }
+  >();
+
+  (statusHistoryRows ?? []).forEach((row) => {
+    latestStatusByHousehold.set(String(row.household_id), {
+      occupancyStatus:
+        row.occupancy_status as Household['occupancyStatus'],
+      kongsiStatus:
+        row.kongsi_status as NonNullable<Household['kongsiStatus']>,
+    });
+  });
   const households: Household[] = (data ?? []).map((item) => ({
     id: item.id,
     houseNumber: item.house_number,
     residentName: item.resident_name,
-    occupancyStatus: item.occupancy_status as Household['occupancyStatus'],
+    occupancyStatus:
+  latestStatusByHousehold.get(item.id)?.occupancyStatus ??
+  (item.occupancy_status as Household['occupancyStatus']),
     isActive: item.is_active,
     phone: item.phone ?? undefined,
     familyMembers: item.family_members ?? undefined,
     notes: item.notes ?? undefined,
     createdAt: item.created_at,
     updatedAt: item.updated_at,
-    kongsiStatus: item.kongsi_status ?? 'belum_diverifikasi',
+    kongsiStatus:
+  latestStatusByHousehold.get(item.id)?.kongsiStatus ??
+  item.kongsi_status ??
+  'belum_diverifikasi',
     sensusStatus: item.sensus_status ?? 'belum_mengisi',
   }));
 
@@ -2034,11 +2105,6 @@ async deactivateHousehold(id: string): Promise<Household> {
   transaction?: FinancialTransaction;
   additionalPayment?: number;
 }> {
-  const parsedAmount = Math.round(Number(params.amount));
-
-  if (isNaN(parsedAmount) || parsedAmount <= 0) {
-    throw new Error('Tarif tagihan IPL harus lebih besar dari 0 Rupiah.');
-  }
 
   if (!/^\d{4}-\d{2}$/.test(params.period)) {
     throw new Error('Format periode IPL harus YYYY-MM (contoh: 2026-09).');
@@ -2050,8 +2116,8 @@ async deactivateHousehold(id: string): Promise<Household> {
   const { data: householdRow, error: householdError } = await supabase
     .from('households')
     .select(
-      'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes'
-    )
+  'id, house_number, resident_name, occupancy_status, is_active, phone, family_members, notes, kongsi_status'
+)
     .eq('id', params.householdId)
     .single();
 
@@ -2073,6 +2139,7 @@ async deactivateHousehold(id: string): Promise<Household> {
     occupancyStatus:
       householdRow.occupancy_status as Household['occupancyStatus'],
     isActive: householdRow.is_active,
+    kongsiStatus: householdRow.kongsi_status ?? 'belum_diverifikasi',
     phone: householdRow.phone ?? undefined,
     familyMembers: householdRow.family_members ?? undefined,
     notes: householdRow.notes ?? undefined,
@@ -2115,7 +2182,81 @@ async deactivateHousehold(id: string): Promise<Household> {
         notes: existingRow.notes || undefined,
       }
     : undefined;
+    // Gunakan status rumah yang efektif pada periode pembayaran.
+  const periodStart = `${params.period}-01`;
 
+  const { data: statusHistoryRows, error: statusHistoryError } =
+    await supabase
+      .from('household_status_history')
+      .select('occupancy_status, kongsi_status, effective_from')
+      .eq('household_id', params.householdId)
+      .eq('is_cancelled', false)
+      .lte('effective_from', periodStart)
+      .order('effective_from', { ascending: false })
+      .limit(1);
+
+  if (statusHistoryError) {
+    console.error(
+      '[DataService] Gagal memuat status efektif rumah:',
+      statusHistoryError
+    );
+    throw new Error(
+      statusHistoryError.message ||
+        'Gagal menentukan status efektif rumah untuk tagihan.'
+    );
+  }
+
+  const effectiveStatusRow = statusHistoryRows?.[0];
+
+  const billingHousehold: Household = effectiveStatusRow
+    ? {
+        ...household,
+        occupancyStatus:
+          effectiveStatusRow.occupancy_status as Household['occupancyStatus'],
+        kongsiStatus:
+          effectiveStatusRow.kongsi_status as NonNullable<
+            Household['kongsiStatus']
+          >,
+      }
+    : household;
+
+  // Tagihan lama tidak diubah. Untuk tagihan baru gunakan status
+  // efektif yang sesuai dengan periodenya.
+  const savedExistingAmount = existingPayment
+    ? Number(existingPayment.amount)
+    : 0;
+
+  const parsedAmount =
+    existingPayment &&
+    Number.isFinite(savedExistingAmount) &&
+    savedExistingAmount > 0
+      ? Math.round(savedExistingAmount)
+      : getMonthlyIPLAmount(billingHousehold);
+
+  if (
+    parsedAmount === null ||
+    !Number.isFinite(parsedAmount) ||
+    parsedAmount <= 0
+  ) {
+    if (billingHousehold.occupancyStatus === 'kosong') {
+      throw new Error(
+        'Tarif rumah kosong belum ditetapkan oleh paguyuban.'
+      );
+    }
+
+    if (
+      billingHousehold.kongsiStatus !== 'terdaftar' &&
+      billingHousehold.kongsiStatus !== 'tidak_terdaftar'
+    ) {
+      throw new Error(
+        'Status Kongsi belum terverifikasi. Perbarui status rumah sebelum mencatat iuran.'
+      );
+    }
+
+    throw new Error(
+      'Tarif iuran tidak valid. Periksa status hunian rumah.'
+    );
+  }
   const existingPaid = existingPayment
     ? Math.max(0, Number(existingPayment.paidAmount) || 0)
     : 0;
@@ -2834,63 +2975,50 @@ return transactions;
       }
     }
 
-    const current = this.getTransactions(true);
-    let targetTx: FinancialTransaction | null = null;
-    const updated = current.map((t) => {
-      if (t.id === id) {
-        targetTx = {
-          ...t,
-          status: 'void',
-          voidReason: reason,
-          voidedAt: nowIso,
-          voidedBy,
-          updatedAt: nowIso,
-        };
-        return targetTx;
+    
+    // Pembatalan transaksi langsung ke Supabase melalui RPC.
+    // Identitas pembatal diambil oleh server dari auth.uid().
+    void voidedBy;
+
+    const { error } = await supabase.rpc(
+      'void_financial_transaction',
+      {
+        p_transaction_id: id,
+        p_reason: reason,
       }
-      return t;
-    });
+    );
 
-    setStored(STORAGE_KEYS.TRANSACTIONS, updated);
+    if (error) {
+      console.error(
+        '[DataService] Supabase voidTransaction error:',
+        error
+      );
 
-    // Sinkronisasi status IPL jika transaksi yang di-void adalah pembayaran IPL
-    if (targetTx && (targetTx as FinancialTransaction).iplPaymentId) {
-      const iplId = (targetTx as FinancialTransaction).iplPaymentId!;
-      const currentIPLs = this.getIPLPayments();
-      const targetIpl = currentIPLs.find((p) => p.id === iplId);
-
-      if (targetIpl) {
-        // Hitung ulang total pembayaran IPL aktif = SUM semua financial transaction aktif yang terkait IPL tersebut
-        const activeTxsForIpl = updated.filter(
-          (t) => t.iplPaymentId === iplId && t.status !== 'void' && t.type === 'in'
-        );
-        const newPaidAmount = activeTxsForIpl.reduce((sum, t) => sum + (t.amount || 0), 0);
-
-        let newStatus: IPLPaymentStatus = 'belum';
-        if (newPaidAmount >= targetIpl.amount) {
-          newStatus = 'lunas';
-        } else if (newPaidAmount > 0) {
-          newStatus = 'sebagian';
-        }
-
-        const activeTxIds = activeTxsForIpl.map((t) => t.id);
-        const updatedIPL: IPLPayment = {
-          ...targetIpl,
-          paidAmount: newPaidAmount,
-          status: newStatus,
-          paidAt: activeTxsForIpl.length > 0 ? activeTxsForIpl[0].date : undefined,
-          transactionId: activeTxIds[0],
-          transactionIds: activeTxIds,
-          updatedAt: nowIso,
-        };
-
-        const updatedIPLList = currentIPLs.map((p) => (p.id === iplId ? updatedIPL : p));
-        setStored(STORAGE_KEYS.IPL_PAYMENTS, updatedIPLList);
-      }
+      throw new Error(
+        error.message || 'Gagal membatalkan transaksi di Supabase.'
+      );
     }
 
+    // Muat ulang data resmi setelah RPC berhasil.
+    const refreshedTransactions = await this.fetchTransactions(true);
+
+    const targetTx =
+      refreshedTransactions.find((tx) => tx.id === id) ?? null;
+
+    if (!targetTx || targetTx.status !== 'void') {
+      throw new Error(
+        'RPC selesai, tetapi transaksi belum terkonfirmasi berstatus void. Periksa transaksi di Supabase sebelum mencoba lagi.'
+      );
+    }
+
+    // Segarkan pembayaran IPL agar jumlah pembayaran dan statusnya
+    // sesuai dengan transaksi aktif di Supabase.
+    await this.fetchIPLPayments();
+
     emitDataChange();
+
     return targetTx;
+
   },
 
   async deleteTransaction(id: string): Promise<void> {
@@ -3810,7 +3938,7 @@ const newReport: CitizenReport = {
         status: newReport.status,
         created_at: newReport.createdAt,
       });
-  
+
     if (error) {
       console.error('[DataService] Supabase submitReport error:', error);
       throw new Error(error.message || 'Gagal mengirim laporan warga');
