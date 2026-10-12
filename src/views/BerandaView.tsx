@@ -1,6 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
-import { TabKey, Announcement, EventAgenda, RondaSchedule, Household, FinancialTransaction } from '../types/portal';
+import {
+  TabKey,
+  Announcement,
+  EventAgenda,
+  RondaSchedule,
+  Household,
+  FinancialTransaction,
+} from '../types/portal';
 import { DataService } from '../services/dataService';
+import { supabase } from '../lib/supabase';
 import heroImage from '@/src/assets/images/hero_mountain_housing_1790351060957.jpg';
 import {
   Trees,
@@ -21,6 +30,18 @@ import {
   SearchCheck,
 } from 'lucide-react';
 
+interface PublicDashboardSummary {
+  active_households: number;
+  kongsi_registered: number;
+  sensus_completed: number;
+  current_balance: number;
+}
+interface PublicDashboardSummary {
+  active_households: number;
+  kongsi_registered: number;
+  sensus_completed: number;
+  current_balance: number;
+}
 interface BerandaViewProps {
   onSelectTab: (tab: TabKey) => void;
   onOpenEmergency: () => void;
@@ -40,7 +61,13 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
   const [rondaSchedules, setRondaSchedules] = useState<RondaSchedule[]>([]);
   const [households, setHouseholds] = useState<Household[]>(() => DataService.getHouseholds());
   const [lastFinanceUpdate, setLastFinanceUpdate] = useState<string | null>(null);
+  
+  const [publicSummary, setPublicSummary] =
+    useState<PublicDashboardSummary | null>(null);
+  const [publicSummaryError, setPublicSummaryError] =
+    useState(false);
 
+  
   // Centralized DataService Subscription
   useEffect(() => {
   let cancelled = false;
@@ -119,7 +146,41 @@ if (!cancelled) {
       console.error('[BerandaView] Gagal memuat data rumah warga:', error);
     }
   };
+   const loadPublicSummary = async () => {
+    try {
+      const { data, error } = await supabase.rpc(
+        'get_public_dashboard_summary'
+      );
 
+      if (error) throw error;
+
+      const summary = Array.isArray(data) ? data[0] : data;
+
+      if (!summary) {
+        throw new Error('Ringkasan publik tidak tersedia');
+      }
+
+      if (!cancelled) {
+        setPublicSummary({
+          active_households: Number(summary.active_households),
+          kongsi_registered: Number(summary.kongsi_registered),
+          sensus_completed: Number(summary.sensus_completed),
+          current_balance: Number(summary.current_balance),
+        });
+        setPublicSummaryError(false);
+      }
+    } catch (error) {
+      console.error(
+        '[BerandaView] Gagal memuat ringkasan publik:',
+        error
+      );
+
+      if (!cancelled) {
+        setPublicSummaryError(true);
+      }
+    }
+  };
+loadPublicSummary();
   loadData();
 
   const unsubscribe = DataService.subscribe(() => {
@@ -275,9 +336,11 @@ const upcomingAgendas = agendas
   <div>
     <span className="block text-emerald-300 text-[11px] font-medium">Unit Hunian Warga</span>
     <span className="text-sm sm:text-base font-bold text-white">
-      {activeHouseholds.length > 0
-        ? `${activeHouseholds.length} Unit Terdata`
-        : '[Menunggu Data Resmi]'}
+        {publicSummary
+        ? `${publicSummary.active_households} Unit Terdata`
+        : publicSummaryError
+          ? 'Data tidak tersedia'
+          : 'Memuat data...'}
     </span>
     {activeHouseholds.length > 0 && (
       <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
@@ -289,7 +352,11 @@ const upcomingAgendas = agendas
   <div>
     <span className="block text-emerald-300 text-[11px] font-medium">Kongsi Kematian Terdaftar</span>
     <span className="text-sm sm:text-base font-bold text-white tabular-nums">
-      {kongsiTerdaftarCount} Rumah/KK
+      {publicSummary
+  ? `${publicSummary.kongsi_registered} Rumah/KK`
+  : publicSummaryError
+    ? 'Data tidak tersedia'
+    : 'Memuat data...'}
     </span>
     <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
       Data kepesertaan Kongsi Kematian
@@ -299,7 +366,11 @@ const upcomingAgendas = agendas
   <div>
     <span className="block text-emerald-300 text-[11px] font-medium">Sensus Blok H</span>
     <span className="text-sm sm:text-base font-bold text-white tabular-nums">
-      {sensusSudahMengisiCount} Rumah/KK
+      {publicSummary
+  ? `${publicSummary.sensus_completed} Rumah/KK`
+  : publicSummaryError
+    ? 'Data tidak tersedia'
+    : 'Memuat data...'}
     </span>
     <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
       Rumah/KK sudah mengisi sensus
@@ -309,7 +380,11 @@ const upcomingAgendas = agendas
     <div>
     <span className="block text-emerald-300 text-[11px] font-medium">Saldo Kas</span>
     <span className="text-sm sm:text-base font-bold text-white tabular-nums">
-      {formatCurrency(metrics.currentBalance)}
+      {publicSummary
+  ? formatCurrency(publicSummary.current_balance)
+  : publicSummaryError
+    ? 'Data tidak tersedia'
+    : 'Memuat saldo...'}
     </span>
     {lastFinanceUpdate && (
       <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/90 font-medium">
