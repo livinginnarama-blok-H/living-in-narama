@@ -510,7 +510,7 @@ const upcomingAgendas = agendas
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md">
-                Penting
+                {announcement.category}
               </span>
 
               <span className="text-[11px] text-slate-500">
