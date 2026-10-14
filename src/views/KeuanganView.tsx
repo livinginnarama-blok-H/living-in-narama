@@ -945,15 +945,9 @@ const currentModalFee =
       return;
     }
 
-    const newTotal = existingPaidForModal + stageAmt;
-
-    if (newTotal > currentModalFee) {
-      setActionError(
-        'Nominal pembayaran melebihi sisa tagihan periode ini.'
-      );
-      return;
-    }
-
+    // Total pembayaran kumulatif boleh melebihi tagihan.
+// Nominal yang dibukukan tetap mengikuti pembayaran aktual.
+const newTotal = existingPaidForModal + stageAmt;
 
     try {
       const res = await DataService.addIPLPayment({

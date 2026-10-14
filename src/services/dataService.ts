@@ -18,7 +18,7 @@
  *    - ATURAN UTAMA IPL: Satu household + satu periode = SATU record IPL. D1 UNIQUE(household_id, period).
  *    - Pembayaran bertahap: additionalPayment = targetPaidAmount - existingPaidAmount.
  *      Hanya additionalPayment > 0 yang menghasilkan transaksi kas baru (mencegah double-counting).
- *    - Validasi ketat: amount > 0, paidAmount >= 0, paidAmount <= amount ("Nominal pembayaran IPL tidak boleh melebihi tagihan").
+ *    - Validasi nominal: tagihan harus valid, pembayaran tidak boleh negatif, dan pembayaran aktual boleh melebihi tagihan.
  *    - Sinkronisasi Void Transaksi: Membatalkan transaksi kas yang terhubung ke IPL akan otomatis menghitung ulang total pembayaran aktif (SUM transaksi aktif) dan memperbarui status IPL secara konsisten.
  *    - Atomic Batch Worker: Eksekusi D1 pada Worker menggunakan env.DB.batch([...]) untuk atomisitas transaksi.
  */
@@ -2278,15 +2278,13 @@ async deactivateHousehold(id: string): Promise<Household> {
     targetPaidAmount = Math.round(Number(params.paidAmount));
   }
 
-  if (isNaN(targetPaidAmount) || targetPaidAmount < 0) {
-    throw new Error('Nominal pembayaran tidak boleh bernilai negatif.');
-  }
+  if (!Number.isFinite(targetPaidAmount) || targetPaidAmount < 0) {
+  throw new Error('Nominal pembayaran tidak boleh bernilai negatif.');
+}
 
-  if (targetPaidAmount > parsedAmount) {
-    throw new Error(
-      'Nominal pembayaran IPL tidak boleh melebihi tagihan.'
-    );
-  }
+// Pembayaran aktual boleh melebihi tagihan.
+// Status tetap lunas jika pembayaran sama dengan atau lebih besar
+// dari nominal tagihan, sedangkan transaksi kas mencatat jumlah aktual.
 
   const additionalPayment = targetPaidAmount - existingPaid;
 
