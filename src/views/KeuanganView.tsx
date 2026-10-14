@@ -940,11 +940,6 @@ const currentModalFee =
       return;
     }
 
-    if (remainingForModal <= 0) {
-      setActionError('Tagihan periode ini sudah lunas.');
-      return;
-    }
-
     // Total pembayaran kumulatif boleh melebihi tagihan.
 // Nominal yang dibukukan tetap mengikuti pembayaran aktual.
 const newTotal = existingPaidForModal + stageAmt;
@@ -2291,8 +2286,7 @@ const newTotal = existingPaidForModal + stageAmt;
                 <input
                   type="number"
                   min="1"
-                  max={remainingForModal}
-                  disabled={currentModalFee === null || remainingForModal <= 0}
+                  disabled={currentModalFee === null}
                   required
                   value={iplStagePayment}
                   onChange={(e) => setIplStagePayment(Number(e.target.value))}
@@ -2304,7 +2298,7 @@ const newTotal = existingPaidForModal + stageAmt;
                     ? 'Pembayaran belum dapat dicatat sebelum tarif ditentukan.'
                     : remainingForModal <= 0
                       ? 'Tidak ada sisa tagihan pada periode ini.'
-                      : `Maksimal pembayaran tahap ini: ${formatCurrency(remainingForModal)}.`}
+                      : `Masukkan nominal yang benar-benar diterima. Pembayaran boleh melebihi sisa tagihan.`}
                 </p>
 
               </div>
@@ -2359,7 +2353,7 @@ const newTotal = existingPaidForModal + stageAmt;
                 </button>
                 <button
                   type="submit"
-                  disabled={currentModalFee === null || remainingForModal <= 0}
+                  disabled={currentModalFee === null}
                   className="px-4 py-2 font-semibold text-white bg-emerald-800 hover:bg-emerald-700 rounded-lg transition-colors shadow-xs"
                 >
                   Simpan Pembayaran IPL
