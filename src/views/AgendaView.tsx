@@ -225,14 +225,20 @@ const handleDeleteRonda = async (id: string) => {
     );
   }
 };
-  const filteredAgendas = agendas.filter((item) => {
-    if (statusFilter === 'all') return true;
-    return item.status === statusFilter;
+    const today = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Jakarta',
   });
 
-  // Calculate next upcoming agenda
+  const filteredAgendas = agendas.filter((item) => {
+    const isPast = item.date < today;
+    const effectiveStatus = isPast ? 'completed' : item.status;
+
+    if (statusFilter === 'all') return true;
+    return effectiveStatus === statusFilter;
+  });
+
   const nextAgenda = agendas
-    .filter((a) => a.status === 'upcoming')
+    .filter((a) => a.date >= today && a.status === 'upcoming')
     .sort((a, b) => a.date.localeCompare(b.date))[0];
 
   const handleAddSubmit = async (e: React.FormEvent) => {
