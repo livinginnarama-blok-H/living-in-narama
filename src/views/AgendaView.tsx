@@ -329,15 +329,59 @@ const handleDeleteRonda = async (id: string) => {
   }
 };
 
+  
+  
   const handleAddToCalendar = (item: AgendaItem) => {
     const title = encodeURIComponent(`[Warga Blok H] ${item.title}`);
-    const details = encodeURIComponent(`${item.description}\nLokasi: ${item.location}\nPIC: ${item.pic}`);
+    const details = encodeURIComponent(
+      `${item.description || ''}\nLokasi: ${item.location}\nPenanggung Jawab: ${item.pic || 'Pengurus Blok H'}`
+    );
     const location = encodeURIComponent(item.location);
-    // Format YYYYMMDD
-    const dateFormatted = item.date.replace(/-/g, '');
-    const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}&dates=${dateFormatted}T070000Z/${dateFormatted}T100000Z`;
+
+    // Ambil jam lokal dari agenda, misalnya "19:30".
+    const timeMatch = item.time.match(/(\d{1,2}):(\d{2})/);
+
+    if (!timeMatch) {
+      console.error('[AgendaView] Format jam agenda tidak dikenali:', item.time);
+      return;
+    }
+
+    const hour = Number(timeMatch[1]);
+    const minute = Number(timeMatch[2]);
+
+    if (hour > 23 || minute > 59) {
+      console.error('[AgendaView] Jam agenda tidak valid:', item.time);
+      return;
+    }
+
+    // Gunakan waktu lokal tanpa akhiran Z, dengan zona waktu WIB.
+    const [year, month, day] = item.date.split('-').map(Number);
+    const startDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+
+    const formatLocalCalendarDate = (date: Date) => {
+      const y = date.getUTCFullYear();
+      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(date.getUTCDate()).padStart(2, '0');
+      const h = String(date.getUTCHours()).padStart(2, '0');
+      const min = String(date.getUTCMinutes()).padStart(2, '0');
+
+      return `${y}${m}${d}T${h}${min}00`;
+    };
+
+    const dates = `${formatLocalCalendarDate(startDate)}/${formatLocalCalendarDate(endDate)}`;
+
+    const gCalUrl =
+      `https://calendar.google.com/calendar/render?action=TEMPLATE` +
+      `&text=${title}` +
+      `&details=${details}` +
+      `&location=${location}` +
+      `&dates=${dates}` +
+      `&ctz=Asia%2FJakarta`;
+
     window.open(gCalUrl, '_blank');
   };
+
 
   return (
     <div className="space-y-6">
