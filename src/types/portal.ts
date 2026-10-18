@@ -161,7 +161,8 @@ export interface EventAgenda {
     | 'sosial'
     | 'keagamaan'
     | 'olahraga'
-    | 'posyandu';
+    | 'posyandu'
+    | 'pengambilan-jimpitan';
 
   description: string;
   pic: string;

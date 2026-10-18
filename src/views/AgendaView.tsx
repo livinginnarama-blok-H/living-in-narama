@@ -731,6 +731,7 @@ const handleDeleteRonda = async (id: string) => {
                     <option value="posyandu">Posyandu & Kesehatan</option>
                     <option value="olahraga">Olahraga</option>
                     <option value="sosial">Sosial / Keagamaan</option>
+                    <option value="pengambilan-jimpitan">Pengambilan Jimpitan</option>
                   </select>
                 </div>
               </div>
