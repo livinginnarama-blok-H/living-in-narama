@@ -136,8 +136,13 @@ export const PublikasiView: React.FC<PublikasiViewProps> = ({
       }
 
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const filePath =
-        `${authData.user.id}/${crypto.randomUUID()}-${safeName}`;
+
+      const fileId =
+        typeof globalThis.crypto?.randomUUID === 'function'
+          ? globalThis.crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+
+      const filePath = `${authData.user.id}/${fileId}-${safeName}`;
 
       const { error: uploadError } = await supabase.storage
         .from(BUCKET)
