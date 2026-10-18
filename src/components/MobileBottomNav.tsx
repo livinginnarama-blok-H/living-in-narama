@@ -6,12 +6,14 @@ interface MobileBottomNavProps {
   activeTab: TabKey;
   onSelectTab: (tab: TabKey) => void;
   isAdmin: boolean;
+  canManageFinance: boolean;
 }
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   activeTab,
   onSelectTab,
   isAdmin,
+  canManageFinance,
 }) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -21,6 +23,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   };
 
   const isMoreActive =
+  activeTab === 'keuangan' ||
   activeTab === 'komunitas' ||
   activeTab === 'dokumentasi' ||
   activeTab === 'pengurus' ||
@@ -49,6 +52,21 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             </div>
 
             <div className="grid grid-cols-4 gap-3 py-2">
+
+
+               {canManageFinance && (
+                <button
+                  onClick={() => handleSelect('keuangan')}
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-colors min-h-[72px] ${
+                    activeTab === 'keuangan'
+                      ? 'border-emerald-700 bg-emerald-50 text-emerald-900'
+                      : 'border-slate-100 bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <FileText className="w-5 h-5 mb-1.5 text-emerald-700" />
+                  <span className="text-xs font-medium">Keuangan</span>
+                </button>
+              )}
               <button
   onClick={() => handleSelect('komunitas')}
   className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-colors min-h-[72px] ${

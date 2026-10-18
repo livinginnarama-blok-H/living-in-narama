@@ -202,6 +202,7 @@ setActiveTab('beranda');
         onSelectTab={handleSelectTab}
         isAdmin={isAuthenticated}
         isAuthenticated={isAuthenticated}
+        canManageFinance={canManageFinance}
         adminName={adminName}
         onLogoutAdmin={handleLogout}
         onOpenEmergency={() => setIsEmergencyOpen(true)}
@@ -262,6 +263,7 @@ setActiveTab('beranda');
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
         isAdmin={isAuthenticated && userRole !== 'bendahara'}
+        canManageFinance={canManageFinance}
       />
 
       {/* Emergency Contacts Modal */}

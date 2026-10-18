@@ -1765,8 +1765,9 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
         </button>
       </div>
 
+      
       {/* Sub-tabs for Admin Management */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2">
+      <div className="grid w-full grid-cols-2 gap-2 border-b border-slate-200 pb-3 sm:grid-cols-3 lg:grid-cols-5">
         <button
           onClick={() => setAdminTab(adminTab === 'laporan' ? null : 'laporan')}
           className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
@@ -1776,9 +1777,58 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
           }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          <span>Aspirasi & Lapor Warga ({reports.length})</span>
-                </button>
-                </div>
+          <span>Aspirasi &amp; Lapor Warga ({reports.length})</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab(adminTab === 'warga' ? null : 'warga')}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
+            adminTab === 'warga'
+              ? 'bg-emerald-800 text-white'
+              : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Data Warga ({households.length})</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab(adminTab === 'pengurus' ? null : 'pengurus')}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
+            adminTab === 'pengurus'
+              ? 'bg-emerald-800 text-white'
+              : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Pengurus ({organizationMembers.length})</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab(adminTab === 'komunitas' ? null : 'komunitas')}
+
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
+            adminTab === 'komunitas'
+              ? 'bg-emerald-800 text-white'
+              : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Komunitas ({communityGroups.length + communityAchievements.length})</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab(adminTab === 'kontak' ? null : 'kontak')}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
+            adminTab === 'kontak'
+              ? 'bg-emerald-800 text-white'
+              : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
+          }`}
+        >
+          <ShieldAlert className="w-3.5 h-3.5" />
+          <span>Kontak Darurat</span>
+        </button>
+      </div>
 
       {/* Tab 1: Aspirasi & Laporan Warga */}
       {adminTab === 'laporan' && (
@@ -2043,50 +2093,6 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
         </div>
         </div>
       )}
-      <button
-        onClick={() => setAdminTab(adminTab === 'warga' ? null : 'warga')}
-        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
-          adminTab === 'warga'
-            ? 'bg-emerald-800 text-white'
-            : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
-        }`}
-      >
-        <Users className="w-3.5 h-3.5" />
-        <span>Data Warga ({households.length})</span>
-      </button>
-<button
-  onClick={() => setAdminTab(adminTab === 'pengurus' ? null : 'pengurus')}
-  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
-    adminTab === 'pengurus'
-      ? 'bg-emerald-800 text-white'
-      : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
-  }`}
->
-  <Users className="w-3.5 h-3.5" />
-  <span>Pengurus ({organizationMembers.length})</span>
-</button>
-<button
-  onClick={() => setAdminTab(adminTab === 'komunitas' ? null : 'komunitas')}
-  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
-    adminTab === 'komunitas'
-      ? 'bg-emerald-800 text-white'
-      : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
-  }`}
->
-  <Users className="w-3.5 h-3.5" />
-  <span>Komunitas ({communityGroups.length + communityAchievements.length})</span>
-</button>
-<button
-  onClick={() => setAdminTab(adminTab === 'kontak' ? null : 'kontak')}
-  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
-    adminTab === 'kontak'
-      ? 'bg-emerald-800 text-white'
-      : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
-  }`}
->
-  <ShieldAlert className="w-3.5 h-3.5" />
-  <span>Kontak Darurat</span>
-</button>
 {adminTab === 'pengurus' && (
   <div className="space-y-4">
     {/* Header */}

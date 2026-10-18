@@ -8,6 +8,7 @@ interface HeaderNavProps {
   onSelectTab: (tab: TabKey) => void;
   isAdmin: boolean;
   isAuthenticated: boolean;
+  canManageFinance: boolean;
   adminName: string;
   onLogoutAdmin: () => void | Promise<void>;
   onOpenEmergency: () => void;
@@ -19,17 +20,21 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   onSelectTab,
   isAdmin,
   isAuthenticated,
+  canManageFinance,
   adminName,
   onLogoutAdmin,
   onOpenEmergency,
   onOpenReport,
 }) => {
-  const navItems: { tab: TabKey; label: string }[] = [
+    const navItems: { tab: TabKey; label: string }[] = [
     { tab: 'beranda', label: 'Beranda' },
     { tab: 'pengumuman', label: 'Pengumuman' },
     { tab: 'agenda', label: 'Agenda' },
     { tab: 'komunitas', label: 'Komunitas' },
     { tab: 'publikasi', label: 'Publikasi' },
+    ...(canManageFinance
+      ? [{ tab: 'keuangan' as TabKey, label: 'Keuangan' }]
+      : []),
     { tab: 'dokumentasi', label: 'Dokumentasi' },
     { tab: 'pengurus', label: 'Pengurus' },
   ];
