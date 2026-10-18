@@ -114,6 +114,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ isAdmin }) => {
   }, []);
   // Add Agenda Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingAgenda, setEditingAgenda] = useState<AgendaItem | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [newDate, setNewDate] = useState('2026-10-15');
   const [newTime, setNewTime] = useState('08:00 - 10:00 WIB');
@@ -241,37 +242,69 @@ const handleDeleteRonda = async (id: string) => {
     .filter((a) => a.date >= today && a.status === 'upcoming')
     .sort((a, b) => a.date.localeCompare(b.date))[0];
 
+    const openEditAgendaModal = (item: AgendaItem) => {
+    setEditingAgenda(item);
+    setNewTitle(item.title);
+    setNewDate(item.date);
+    setNewTime(item.time);
+    setNewLocation(item.location);
+    setNewCategory(item.category);
+    setNewPic(item.pic || '');
+    setNewDescription(item.description || '');
+    setErrorMessage('');
+    setIsAddModalOpen(true);
+  };
+  
+  
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
     try {
-  const newAgenda = await DataService.addAgenda({
-    title: newTitle.trim(),
-    date: newDate,
-    time: newTime,
-    location: newLocation,
-    category: newCategory,
-    pic: newPic || 'Pengurus Blok H',
-    description: newDescription,
-    status: 'upcoming',
-  });
+      const agendaData = {
+        title: newTitle.trim(),
+        date: newDate,
+        time: newTime,
+        location: newLocation,
+        category: newCategory,
+        pic: newPic || 'Pengurus Blok H',
+        description: newDescription,
+      };
 
-  setAgendas((current) => [newAgenda, ...current]);
+      if (editingAgenda) {
+        const updatedAgenda = await DataService.updateAgenda(
+          editingAgenda.id,
+          agendaData
+        );
 
-  setIsAddModalOpen(false);
-  setNewTitle('');
-  setNewDescription('');
-  setErrorMessage('');
-} catch (error) {
-  console.error('[AgendaView] Gagal menambah agenda:', error);
+        setAgendas((current) =>
+          current.map((item) =>
+            item.id === updatedAgenda.id ? updatedAgenda : item
+          )
+        );
+      } else {
+        const newAgenda = await DataService.addAgenda({
+          ...agendaData,
+          status: 'upcoming',
+        });
 
-  setErrorMessage(
-    error instanceof Error
-      ? error.message
-      : 'Gagal menambah agenda'
-  );
-}
+        setAgendas((current) => [newAgenda, ...current]);
+      }
+
+      setIsAddModalOpen(false);
+      setEditingAgenda(null);
+      setNewTitle('');
+      setNewDescription('');
+      setErrorMessage('');
+    } catch (error) {
+      console.error('[AgendaView] Gagal menyimpan agenda:', error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Gagal menyimpan agenda'
+      );
+    }
   };
 
  const handleDelete = async (id: string) => {
@@ -327,7 +360,18 @@ const handleDeleteRonda = async (id: string) => {
 
         {isAdmin && (
           <button
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              setEditingAgenda(null);
+              setNewTitle('');
+              setNewDate('2026-10-15');
+              setNewTime('08:00 - 10:00 WIB');
+              setNewLocation('Taman Narama Blok H');
+              setNewCategory('kerja-bakti');
+              setNewPic('');
+              setNewDescription('');
+              setErrorMessage('');
+              setIsAddModalOpen(true);
+            }}
             className="self-start sm:self-auto px-4 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-700 rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
           >
             <Plus className="w-4 h-4" />
@@ -458,15 +502,28 @@ const handleDeleteRonda = async (id: string) => {
                       >
                         {item.status === 'completed' ? 'Selesai' : 'Mendatang'}
                       </span>
+                      
                       {isAdmin && (
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="text-slate-400 hover:text-rose-600 p-1"
-                          title="Hapus"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditAgendaModal(item)}
+                            className="text-slate-400 hover:text-emerald-700 p-1"
+                            title="Edit Agenda"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item.id)}
+                            className="text-slate-400 hover:text-rose-600 p-1"
+                            title="Hapus"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       )}
+
                     </div>
                   </div>
 
@@ -651,12 +708,22 @@ const handleDeleteRonda = async (id: string) => {
       {/* Admin Add Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="fixed inset-0" onClick={() => setIsAddModalOpen(false)} />
+          <div className="fixed inset-0" onClick={() => {
+            setIsAddModalOpen(false);
+            setEditingAgenda(null);
+            setErrorMessage('');
+          }} />
           <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900">Tambah Agenda Kegiatan Baru</h3>
+              <h3 className="text-base font-bold text-slate-900">
+                {editingAgenda ? 'Edit Agenda Kegiatan' : 'Tambah Agenda Kegiatan Baru'}
+              </h3>
               <button
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={() => {
+                  setIsAddModalOpen(false);
+                  setEditingAgenda(null);
+                  setErrorMessage('');
+                }}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
               >
                 <X className="w-5 h-5" />
@@ -763,7 +830,11 @@ const handleDeleteRonda = async (id: string) => {
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={() => {
+                  setIsAddModalOpen(false);
+                  setEditingAgenda(null);
+                  setErrorMessage('');
+                }}
                   className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
                 >
                   Batal
@@ -772,7 +843,7 @@ const handleDeleteRonda = async (id: string) => {
                   type="submit"
                   className="px-4 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-700 rounded-lg transition-colors"
                 >
-                  Simpan Agenda
+                  {editingAgenda ? 'Simpan Perubahan' : 'Simpan Agenda'}
                 </button>
               </div>
             </form>

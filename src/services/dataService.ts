@@ -370,10 +370,14 @@ updateAnnouncement(
 ): Promise<Announcement>;
 deleteAnnouncement(id: string): Promise<void>;
 
-  // Agendas / Events
+    // Agendas / Events
   getAgendas(): EventAgenda[];
   fetchAgendas(): Promise<EventAgenda[]>;
   addAgenda(item: Omit<EventAgenda, 'id' | 'createdAt'>): Promise<EventAgenda>;
+  updateAgenda(
+    id: string,
+    item: Partial<Omit<EventAgenda, 'id' | 'createdAt'>>
+  ): Promise<EventAgenda>;
   deleteAgenda(id: string): Promise<void>;
 
   // Organization / Pengurus
@@ -1704,6 +1708,55 @@ async deleteOrganizationMember(
     emitDataChange();
 
     return agenda;
+  },
+  
+  async updateAgenda(
+    id: string,
+    item: Partial<Omit<EventAgenda, 'id' | 'createdAt'>>
+  ): Promise<EventAgenda> {
+    const updateData: Record<string, unknown> = {};
+
+    if (item.title !== undefined) updateData.title = item.title;
+    if (item.date !== undefined) updateData.date = item.date;
+    if (item.time !== undefined) updateData.time = item.time;
+    if (item.location !== undefined) updateData.location = item.location;
+    if (item.category !== undefined) updateData.category = item.category;
+    if (item.description !== undefined) updateData.description = item.description;
+    if (item.pic !== undefined) updateData.pic = item.pic;
+    if (item.status !== undefined) updateData.status = item.status;
+
+    updateData.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('agendas')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DataService] Supabase updateAgenda error:', error);
+      throw new Error(error.message || 'Gagal memperbarui agenda');
+    }
+
+    const updated: EventAgenda = {
+      id: data.id,
+      title: data.title,
+      date: data.date,
+      time: data.time,
+      location: data.location,
+      category: data.category,
+      description: data.description || '',
+      pic: data.pic || '',
+      status: data.status,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+
+    await this.fetchAgendas();
+    emitDataChange();
+
+    return updated;
   },
 
   async deleteAgenda(id: string): Promise<void> {
