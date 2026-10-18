@@ -79,10 +79,9 @@ const canManageFinance =
   canManage ||
   (isAuthenticated && userRole === 'bendahara');
 
-// Halaman login bisa dibuka saat belum login.
-// Bendahara yang sudah login tidak boleh membuka administrasi.
-const canAccessAdmin =
-  !isAuthenticated || userRole !== 'bendahara';
+// Semua akun dapat membuka halaman Admin.
+// Hak mengubah data tetap ditentukan oleh canManage.
+const canAccessAdmin = true;
 
   // Subscribe to centralized auth session changes
   useEffect(() => {
@@ -163,7 +162,8 @@ setActiveTab('beranda');
       <HeaderNav
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        isAdmin={isAuthenticated && userRole !== 'bendahara'}
+        isAdmin={isAuthenticated}
+        isAuthenticated={isAuthenticated}
         adminName={adminName}
         onLogoutAdmin={handleLogout}
         onOpenEmergency={() => setIsEmergencyOpen(true)}
@@ -198,7 +198,7 @@ setActiveTab('beranda');
 
         {activeTab === 'admin' && canAccessAdmin && (
         <AdminView
-          isAdmin={canAccessAdmin}
+          isAdmin={isAuthenticated}
           canManage={canManage}
             onLoginSuccess={() => {
               setIsAuthenticated(true);
