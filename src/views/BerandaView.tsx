@@ -59,11 +59,10 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
 }) => {
   const [announcements, setAnnouncements] = useState<Announcement[]>(() => DataService.getAnnouncements());
   const [agendas, setAgendas] = useState<EventAgenda[]>(() => DataService.getAgendas());
-  const [metrics, setMetrics] = useState(() => DataService.getFinancialMetrics());
   const [rondaSchedules, setRondaSchedules] = useState<RondaSchedule[]>([]);
   const [households, setHouseholds] = useState<Household[]>(() => DataService.getHouseholds());
   const [lastFinanceUpdate, setLastFinanceUpdate] = useState<string | null>(null);
-  
+
   const [publicSummary, setPublicSummary] =
     useState<PublicDashboardSummary | null>(null);
   const [publicSummaryError, setPublicSummaryError] =
@@ -84,7 +83,7 @@ const [publicHouseholdCountsError, setPublicHouseholdCountsError] =
     }).format(new Date(lastFinanceUpdate))} WIB`
   : 'Belum ada transaksi tercatat';
 
-  
+
   // Centralized DataService Subscription
   useEffect(() => {
   let cancelled = false;
@@ -118,16 +117,7 @@ const [publicHouseholdCountsError, setPublicHouseholdCountsError] =
     } catch (error) {
       console.error('[BerandaView] Gagal memuat jadwal ronda:', error);
     }
-    // Load transaksi keuangan terbaru dari Supabase
-    try {
-      await DataService.fetchTransactions(true);
 
-if (!cancelled) {
-  setMetrics(DataService.getFinancialMetrics());
-}
-    } catch (error) {
-      console.error('[BerandaView] Gagal memuat transaksi keuangan:', error);
-    }
         // Load data rumah warga terbaru dari Supabase
     try {
       const fetchedHouseholds = await DataService.fetchHouseholds();
@@ -230,12 +220,11 @@ loadPublicSummary();
 loadPublicHouseholdCounts();
 loadData();
 
-  const unsubscribe = DataService.subscribe(() => {
+    const unsubscribe = DataService.subscribe(() => {
     if (cancelled) return;
 
     setAnnouncements(DataService.getAnnouncements());
     setAgendas(DataService.getAgendas());
-    setMetrics(DataService.getFinancialMetrics());
   });
 
   return () => {
@@ -344,7 +333,7 @@ const upcomingAgendas = agendas
               <MessageSquare className="w-4 h-4 text-emerald-300" />
               <span>Lapor / Saran Warga</span>
             </button>
-             
+
              <button
               onClick={onOpenCheckReport}
               className="px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-emerald-500/40 transition-colors flex items-center gap-2"
@@ -352,7 +341,7 @@ const upcomingAgendas = agendas
               <SearchCheck className="w-4 h-4 text-emerald-300" />
               <span>Cek Status Laporan</span>
             </button>
-            
+
             <button
               onClick={onOpenEmergency}
               className="px-4 py-2.5 text-xs sm:text-sm font-medium rounded-xl bg-rose-950/60 hover:bg-rose-900 text-rose-200 border border-rose-800/50 transition-colors flex items-center gap-2"
@@ -360,7 +349,7 @@ const upcomingAgendas = agendas
               <PhoneCall className="w-4 h-4 text-rose-300" />
               <span>Kontak Darurat</span>
             </button>
-             
+
           </div>
         </div>
 
@@ -473,7 +462,7 @@ const upcomingAgendas = agendas
     <span className="block mt-1 text-[10px] sm:text-[11px] text-emerald-100/70 font-medium">
   Berdasarkan transaksi aktif
 </span>
-  </div>  
+  </div>
 </div>
       </section>
 
@@ -605,10 +594,10 @@ const upcomingAgendas = agendas
                 <h3 className="text-sm font-bold text-slate-900">Transparansi Kas Blok H</h3>
               </div>
               <button
-                onClick={() => onSelectTab('keuangan')}
+                onClick={() => onSelectTab('publikasi')}
                 className="text-xs text-emerald-700 hover:text-emerald-900 font-medium flex items-center gap-0.5"
               >
-                <span>Rincian</span>
+                <span>Dokumen</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -630,10 +619,10 @@ const upcomingAgendas = agendas
           </div>
 
           <button
-            onClick={() => onSelectTab('keuangan')}
+            onClick={() => onSelectTab('publikasi')}
             className="w-full py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors text-center"
           >
-            Lihat Laporan Buku Kas Lengkap
+            Lihat Dokumen Informasi Keuangan
           </button>
         </div>
 

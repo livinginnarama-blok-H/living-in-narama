@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TabKey } from '../types/portal';
-import { Home, Bell, Calendar, Wallet, MoreHorizontal, Camera, Lock, X, Users } from 'lucide-react';
+import { Home, Bell, Calendar, FileText, MoreHorizontal, Camera, Lock, X, Users } from 'lucide-react';
 
 interface MobileBottomNavProps {
   activeTab: TabKey;
@@ -141,15 +141,15 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             </span>
           </button>
 
-          <button
-            onClick={() => handleSelect('keuangan')}
+                    <button
+            onClick={() => handleSelect('publikasi')}
             className={`flex flex-col items-center justify-center min-h-[44px] transition-colors ${
-              activeTab === 'keuangan' ? 'text-emerald-800' : 'text-slate-500 hover:text-slate-800'
+              activeTab === 'publikasi' ? 'text-emerald-800' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Wallet className="w-5 h-5" />
-            <span className={`text-[11px] mt-1 ${activeTab === 'keuangan' ? 'font-bold' : 'font-medium'}`}>
-              Keuangan
+            <FileText className="w-5 h-5" />
+            <span className={`text-[11px] mt-1 ${activeTab === 'publikasi' ? 'font-bold' : 'font-medium'}`}>
+              Publikasi
             </span>
           </button>
 

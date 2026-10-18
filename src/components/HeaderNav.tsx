@@ -29,7 +29,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
     { tab: 'pengumuman', label: 'Pengumuman' },
     { tab: 'agenda', label: 'Agenda' },
     { tab: 'komunitas', label: 'Komunitas' },
-    { tab: 'keuangan', label: 'Keuangan' },
+    { tab: 'publikasi', label: 'Publikasi' },
     { tab: 'dokumentasi', label: 'Dokumentasi' },
     { tab: 'pengurus', label: 'Pengurus' },
   ];

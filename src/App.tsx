@@ -19,6 +19,7 @@ import { PengumumanView } from './views/PengumumanView';
 import { AgendaView } from './views/AgendaView';
 import KomunitasView from './views/KomunitasView';
 import { KeuanganView } from './views/KeuanganView';
+import { PublikasiView } from './views/PublikasiView';
 import { DokumentasiView } from './views/DokumentasiView';
 import PengurusView from './views/PengurusView';
 import { AdminView } from './views/AdminView';
@@ -34,6 +35,8 @@ export default function App() {
       return 'agenda';
     case '/komunitas':
       return 'komunitas';
+    case '/publikasi':
+      return 'publikasi';
     case '/keuangan':
       return 'keuangan';
     case '/dokumentasi':
@@ -46,6 +49,41 @@ export default function App() {
       return 'beranda';
   }
 };
+
+
+const [activeTab, setActiveTab] = useState<TabKey>(getTabFromPath());
+const [isAuthenticated, setIsAuthenticated] = useState(false);
+const [authReady, setAuthReady] = useState(false);
+const [userRole, setUserRole] = useState<AdminRole | null>(null);
+const [adminName, setAdminName] = useState('Admin Blok H');
+const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
+const [isReportOpen, setIsReportOpen] = useState(false);
+const [isCheckReportOpen, setIsCheckReportOpen] = useState(false);
+
+// Hak akses berdasarkan status login dan role.
+const canManage =
+  isAuthenticated &&
+  (userRole === 'super_admin' ||
+    userRole === 'admin' ||
+    userRole === 'editor');
+
+// Modul Keuangan hanya untuk Super Admin.
+const canManageFinance =
+  isAuthenticated && userRole === 'super_admin';
+
+// Pengelolaan dokumen Publikasi untuk Admin, Bendahara,
+// dan Super Admin.
+const canManagePublikasi =
+  isAuthenticated &&
+  (userRole === 'super_admin' ||
+    userRole === 'admin' ||
+    userRole === 'bendahara');
+
+// Semua akun dapat membuka halaman Admin.
+// Hak mengubah data tetap ditentukan oleh canManage.
+const canAccessAdmin = true;
+
+// Menangani navigasi tombol Back/Forward browser.
 useEffect(() => {
   const handlePopState = () => {
     setActiveTab(getTabFromPath());
@@ -58,40 +96,32 @@ useEffect(() => {
     window.removeEventListener('popstate', handlePopState);
   };
 }, []);
-const [activeTab, setActiveTab] = useState<TabKey>(getTabFromPath());
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState<AdminRole | null>(null);
-  const [adminName, setAdminName] = useState('Admin Blok H');
-  const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
-  const [isReportOpen, setIsReportOpen] = useState(false);
-  const [isCheckReportOpen, setIsCheckReportOpen] = useState(false);
 
-  
-  // Hak akses berdasarkan status login dan role
-const canManage =
-  isAuthenticated &&
-  (userRole === 'super_admin' ||
-    userRole === 'admin' ||
-    userRole === 'editor');
+// Keuangan hanya bisa dibuka oleh Super Admin.
+useEffect(() => {
+  if (!authReady) return;
 
-// Bendahara boleh mengelola Keuangan, tetapi bukan modul lain.
-const canManageFinance =
-  canManage ||
-  (isAuthenticated && userRole === 'bendahara');
+  if (
+    activeTab === 'keuangan' &&
+    (!isAuthenticated || userRole !== 'super_admin')
+  ) {
+    setActiveTab('publikasi');
+    window.history.replaceState({}, '', '/publikasi');
+  }
+}, [activeTab, authReady, isAuthenticated, userRole]);
 
-// Semua akun dapat membuka halaman Admin.
-// Hak mengubah data tetap ditentukan oleh canManage.
-const canAccessAdmin = true;
+// Subscribe to centralized auth session changes
 
   // Subscribe to centralized auth session changes
   useEffect(() => {
     AuthService.initialize();
 
-    const unsubscribe = AuthService.subscribe((session) => {
+  const unsubscribe = AuthService.subscribe((session) => {
   setIsAuthenticated(session.isAuthenticated);
-  setUserRole(
+    setUserRole(
     session.isAuthenticated ? session.user?.role ?? null : null
   );
+  setAuthReady(true);
 
   const name = session.isAuthenticated
     ? session.user?.name || session.user?.username
@@ -122,6 +152,13 @@ const canAccessAdmin = true;
 
   // Scroll to top on tab change
   const handleSelectTab = (tab: TabKey) => {
+  if (tab === 'keuangan' && !canManageFinance) {
+    setActiveTab('publikasi');
+    window.history.replaceState({}, '', '/publikasi');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
   setActiveTab(tab);
 
   const pathMap: Record<TabKey, string> = {
@@ -129,6 +166,7 @@ const canAccessAdmin = true;
     pengumuman: '/pengumuman',
     agenda: '/agenda',
     komunitas: '/komunitas',
+    publikasi: '/publikasi',
     keuangan: '/keuangan',
     dokumentasi: '/dokumentasi',
     pengurus: '/pengurus',
@@ -181,15 +219,18 @@ setActiveTab('beranda');
           />
         )}
 
-        
+
         {activeTab === 'pengumuman' && <PengumumanView isAdmin={canManage} />}
 
         {activeTab === 'agenda' && <AgendaView isAdmin={canManage} />}
 
         {activeTab === 'komunitas' && <KomunitasView isAdmin={canManage} />}
 
-        {activeTab === 'keuangan' && (
-          <KeuanganView isAdmin={canManageFinance} />
+        {activeTab === 'publikasi' && (
+          <PublikasiView isAdmin={canManagePublikasi} />
+        )}
+        {activeTab === 'keuangan' && canManageFinance && (
+          <KeuanganView isAdmin={true} />
         )}
 
         {activeTab === 'dokumentasi' && <DokumentasiView isAdmin={canManage} />}

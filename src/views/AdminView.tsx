@@ -39,6 +39,7 @@ import {
   Trash2,
   UserPlus,
   ShieldAlert,
+  FileText,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -1741,13 +1742,17 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
         </button>
 
         <button
-          onClick={() => onSelectTab('keuangan')}
-          className="p-3.5 bg-white rounded-xl border border-slate-200 hover:border-emerald-500/40 text-left space-y-1 shadow-2xs transition-colors"
-        >
-          <Wallet className="w-4 h-4 text-emerald-700" />
-          <span className="block text-xs font-bold text-slate-800">Buku Kas & IPL</span>
-          <span className="text-[11px] text-slate-500 block">Catat masuk & keluar kas</span>
-        </button>
+        onClick={() => onSelectTab('publikasi')}
+        className="p-3.5 bg-white rounded-xl border border-slate-200 hover:border-emerald-500/40 text-left space-y-1 shadow-2xs transition-colors"
+      >
+        <FileText className="w-4 h-4 text-emerald-700" />
+        <span className="block text-xs font-bold text-slate-800">
+          Kelola Publikasi
+        </span>
+        <span className="text-[11px] text-slate-500 block">
+          Unggah dan kelola dokumen warga
+        </span>
+      </button>
 
         <button
           onClick={() => onSelectTab('komunitas')}

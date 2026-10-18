@@ -22,6 +22,7 @@ export type TabKey =
   | 'pengumuman'
   | 'agenda'
   | 'komunitas'
+  | 'publikasi'
   | 'keuangan'
   | 'dokumentasi'
   | 'pengurus'
