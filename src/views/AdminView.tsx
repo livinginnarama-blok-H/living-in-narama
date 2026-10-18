@@ -374,12 +374,12 @@ const [organizationMemberIsActive, setOrganizationMemberIsActive] =
     void loadHouseholds();
     void loadOrganizationMembers();
   });
-  
- return () => {
+
+  return () => {
     cancelled = true;
     unsubscribe();
   };
-}, []);
+}, [isAdmin]);
 const loadCommunityData = async () => {
   try {
     setIsLoadingCommunity(true);
