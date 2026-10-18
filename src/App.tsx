@@ -163,7 +163,7 @@ setActiveTab('beranda');
       <HeaderNav
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        isAdmin={canAccessAdmin}
+        isAdmin={isAuthenticated && userRole !== 'bendahara'}
         adminName={adminName}
         onLogoutAdmin={handleLogout}
         onOpenEmergency={() => setIsEmergencyOpen(true)}
@@ -220,7 +220,7 @@ setActiveTab('beranda');
       <MobileBottomNav
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        isAdmin={canAccessAdmin}
+        isAdmin={isAuthenticated && userRole !== 'bendahara'}
       />
 
       {/* Emergency Contacts Modal */}
