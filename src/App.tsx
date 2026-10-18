@@ -79,9 +79,10 @@ const canManageFinance =
   canManage ||
   (isAuthenticated && userRole === 'bendahara');
 
-// Bendahara tidak boleh membuka administrasi.
+// Halaman login bisa dibuka saat belum login.
+// Bendahara yang sudah login tidak boleh membuka administrasi.
 const canAccessAdmin =
-  isAuthenticated && userRole !== 'bendahara';
+  !isAuthenticated || userRole !== 'bendahara';
 
   // Subscribe to centralized auth session changes
   useEffect(() => {
