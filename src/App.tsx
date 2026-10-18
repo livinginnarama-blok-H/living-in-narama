@@ -68,11 +68,20 @@ const [activeTab, setActiveTab] = useState<TabKey>(getTabFromPath());
 
   
   // Hak akses berdasarkan status login dan role
-  const canManage =
-    isAuthenticated &&
-    (userRole === 'super_admin' ||
-      userRole === 'admin' ||
-      userRole === 'editor');
+const canManage =
+  isAuthenticated &&
+  (userRole === 'super_admin' ||
+    userRole === 'admin' ||
+    userRole === 'editor');
+
+// Bendahara boleh mengelola Keuangan, tetapi bukan modul lain.
+const canManageFinance =
+  canManage ||
+  (isAuthenticated && userRole === 'bendahara');
+
+// Bendahara tidak boleh membuka administrasi.
+const canAccessAdmin =
+  isAuthenticated && userRole !== 'bendahara';
 
   // Subscribe to centralized auth session changes
   useEffect(() => {
@@ -153,7 +162,7 @@ setActiveTab('beranda');
       <HeaderNav
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        isAdmin={isAuthenticated}
+        isAdmin={canAccessAdmin}
         adminName={adminName}
         onLogoutAdmin={handleLogout}
         onOpenEmergency={() => setIsEmergencyOpen(true)}
@@ -178,16 +187,18 @@ setActiveTab('beranda');
 
         {activeTab === 'komunitas' && <KomunitasView isAdmin={canManage} />}
 
-        {activeTab === 'keuangan' && <KeuanganView isAdmin={canManage} />}
+        {activeTab === 'keuangan' && (
+          <KeuanganView isAdmin={canManageFinance} />
+        )}
 
         {activeTab === 'dokumentasi' && <DokumentasiView isAdmin={canManage} />}
 
         {activeTab === 'pengurus' && <PengurusView />}
 
-        {activeTab === 'admin' && (
-          <AdminView
-            isAdmin={isAuthenticated}
-            canManage={canManage}
+        {activeTab === 'admin' && canAccessAdmin && (
+        <AdminView
+          isAdmin={canAccessAdmin}
+          canManage={canManage}
             onLoginSuccess={() => {
               setIsAuthenticated(true);
             }}
@@ -208,7 +219,7 @@ setActiveTab('beranda');
       <MobileBottomNav
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        isAdmin={isAuthenticated}
+        isAdmin={canAccessAdmin}
       />
 
       {/* Emergency Contacts Modal */}

@@ -648,6 +648,7 @@ export type AdminRole =
   | 'super_admin'
   | 'admin'
   | 'editor'
+  | 'bendahara'
   | 'viewer';
 
 export interface AdminUser {

@@ -3022,8 +3022,10 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
 
                               <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
                                 {group.category === 'atlet'
-                                  ? 'Atlet'
-                                  : 'Gamers'}
+                                ? 'Atlet'
+                                : group.category === 'gamers'
+                                  ? 'Gamers'
+                                  : 'Umum'}
                               </span>
                             </div>
 
@@ -3656,10 +3658,10 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                       }
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
                     >
+                      <option value="umum">Umum</option>
                       <option value="atlet">Atlet</option>
                       <option value="gamers">Gamers</option>
-                      <option value="umum">Umum</option>
-                    </select>
+                      </select>
                   </div>
                 </div>
 
