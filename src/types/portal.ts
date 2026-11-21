@@ -25,6 +25,7 @@ export type TabKey =
   | 'publikasi'
   | 'keuangan'
   | 'dokumentasi'
+  | 'kongsi-kematian'
   | 'pengurus'
   | 'admin';
 

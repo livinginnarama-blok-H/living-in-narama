@@ -21,6 +21,7 @@ import KomunitasView from './views/KomunitasView';
 import { KeuanganView } from './views/KeuanganView';
 import { PublikasiView } from './views/PublikasiView';
 import { DokumentasiView } from './views/DokumentasiView';
+import { KongsiKematianView } from './views/KongsiKematianView';
 import PengurusView from './views/PengurusView';
 import { AdminView } from './views/AdminView';
 
@@ -41,6 +42,8 @@ export default function App() {
       return 'keuangan';
     case '/dokumentasi':
       return 'dokumentasi';
+    case '/kongsi-kematian':
+      return 'kongsi-kematian';
     case '/admin':
       return 'admin';
     case '/pengurus':
@@ -169,6 +172,7 @@ useEffect(() => {
     publikasi: '/publikasi',
     keuangan: '/keuangan',
     dokumentasi: '/dokumentasi',
+    'kongsi-kematian': '/kongsi-kematian',
     pengurus: '/pengurus',
     admin: '/admin',
   };
@@ -235,7 +239,7 @@ setActiveTab('beranda');
         )}
 
         {activeTab === 'dokumentasi' && <DokumentasiView isAdmin={canManage} />}
-
+        {activeTab === 'kongsi-kematian' && <KongsiKematianView />}
         {activeTab === 'pengurus' && <PengurusView />}
 
         {activeTab === 'admin' && canAccessAdmin && (

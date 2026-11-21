@@ -273,6 +273,53 @@ export function getCurrentSystemMonth(): string {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   return `${year}-${month}`;
 }
+// ==========================================
+// PUBLIC KONGSI KEMATIAN
+// ==========================================
+
+export interface PublicKongsiParticipant {
+  houseNumber: string;
+  fullName: string;
+  residenceStatus: string;
+}
+
+export async function fetchPublicKongsiParticipants(): Promise<
+  PublicKongsiParticipant[]
+> {
+  const { data, error } = await supabase.rpc(
+    'get_public_kongsi_participants'
+  );
+
+  if (error) {
+    console.error(
+      '[DataService] Gagal memuat peserta Kongsi Kematian:',
+      error
+    );
+
+    throw new Error(
+      error.message || 'Gagal memuat daftar peserta Kongsi Kematian.'
+    );
+  }
+
+  const rows = (data ?? []) as Array<{
+    house_number: string | null;
+    resident_name: string | null;
+    occupancy_status: string | null;
+  }>;
+
+  return rows
+    .filter((item) => Boolean(item.house_number))
+    .map((item) => ({
+      houseNumber: item.house_number!,
+      fullName: item.resident_name || 'Belum diisi',
+      residenceStatus: item.occupancy_status || 'belum_diisi',
+    }))
+    .sort((a, b) =>
+      a.houseNumber.localeCompare(b.houseNumber, 'id', {
+        numeric: true,
+      })
+    );
+}
 
 /**
  * Helper to format period string into Indonesian human readable label
