@@ -277,26 +277,33 @@ export function getCurrentSystemMonth(): string {
 // PUBLIC KONGSI KEMATIAN
 // ==========================================
 
+
+export interface PublicKongsiKK {
+  id: string;
+  kkNumber: number;
+  fullName: string;
+}
+
 export interface PublicKongsiParticipant {
   houseNumber: string;
   fullName: string;
   residenceStatus: string;
+  participantCount: number;
+  participants: PublicKongsiKK[];
 }
 
 export async function fetchPublicKongsiParticipants(): Promise<
   PublicKongsiParticipant[]
-  
 > {
   const { data, error } = await supabase.rpc(
-    'get_public_kongsi_participants'
+    'get_public_kongsi_participants_v2'
   );
-  
+
   if (error) {
     console.error(
       '[DataService] Gagal memuat peserta Kongsi Kematian:',
       error
     );
-
     throw new Error(
       error.message || 'Gagal memuat daftar peserta Kongsi Kematian.'
     );
@@ -306,6 +313,12 @@ export async function fetchPublicKongsiParticipants(): Promise<
     house_number: string | null;
     resident_name: string | null;
     occupancy_status: string | null;
+    participant_count: number | null;
+    participants: Array<{
+      id: string;
+      kk_number: number;
+      full_name: string;
+    }> | null;
   }>;
 
   return rows
@@ -314,12 +327,84 @@ export async function fetchPublicKongsiParticipants(): Promise<
       houseNumber: item.house_number!,
       fullName: item.resident_name || 'Belum diisi',
       residenceStatus: item.occupancy_status || 'belum_diisi',
+      participantCount: Number(item.participant_count ?? 0),
+      participants: (item.participants ?? []).map((kk) => ({
+        id: kk.id,
+        kkNumber: kk.kk_number,
+        fullName: kk.full_name,
+      })),
     }))
     .sort((a, b) =>
       a.houseNumber.localeCompare(b.houseNumber, 'id', {
         numeric: true,
       })
     );
+}
+
+
+export type KongsiParticipantStatus =
+  | 'belum_diverifikasi'
+  | 'terdaftar'
+  | 'tidak_terdaftar';
+
+export interface AdminKongsiParticipant {
+  id: string;
+  householdId: string;
+  kkNumber: number;
+  fullName: string;
+  status: KongsiParticipantStatus;
+}
+
+export async function fetchKongsiParticipants(
+  householdId: string
+): Promise<AdminKongsiParticipant[]> {
+  const { data, error } = await supabase
+    .from('kongsi_participants')
+    .select('id, household_id, kk_number, full_name, status')
+    .eq('household_id', householdId)
+    .order('kk_number', { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((item) => ({
+    id: item.id,
+    householdId: item.household_id,
+    kkNumber: item.kk_number,
+    fullName: item.full_name,
+    status: item.status as KongsiParticipantStatus,
+  }));
+}
+
+export async function addKongsiParticipant(
+  householdId: string,
+  fullName: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('kongsi_participants')
+    .insert({
+      household_id: householdId,
+      full_name: fullName.trim(),
+      status: 'belum_diverifikasi',
+    });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function updateKongsiParticipant(
+  id: string,
+  fullName: string,
+  status: KongsiParticipantStatus
+): Promise<void> {
+  const { error } = await supabase
+    .from('kongsi_participants')
+    .update({
+      full_name: fullName.trim(),
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (error) throw new Error(error.message);
 }
 
 /**

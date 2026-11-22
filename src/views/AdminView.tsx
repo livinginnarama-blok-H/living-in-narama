@@ -11,7 +11,14 @@ import {
   CommunityAchievement,
   EmergencyContact,
 } from '../types/portal';
-import { DataService } from '../services/dataService';
+import {
+  DataService,
+  fetchKongsiParticipants,
+  addKongsiParticipant,
+  updateKongsiParticipant,
+  AdminKongsiParticipant,
+  KongsiParticipantStatus,
+} from '../services/dataService';
 import { AuthService } from '../services/authService';
 import { supabase } from '../lib/supabase';
 import {
@@ -128,6 +135,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
     null
   );
   const [households, setHouseholds] = useState<Household[]>([]);
+  const [isKongsiModalOpen, setIsKongsiModalOpen] = useState(false);
+const [selectedKongsiHousehold, setSelectedKongsiHousehold] =
+  useState<Household | null>(null);
+const [kongsiParticipants, setKongsiParticipants] =
+  useState<AdminKongsiParticipant[]>([]);
+const [kongsiDrafts, setKongsiDrafts] = useState<
+  Record<string, { fullName: string; status: KongsiParticipantStatus }>
+>({});
+const [newKkName, setNewKkName] = useState('');
+const [isLoadingKongsi, setIsLoadingKongsi] = useState(false);
+const [isSavingKongsi, setIsSavingKongsi] = useState(false);
+const [kongsiError, setKongsiError] = useState('');
   const [householdSearch, setHouseholdSearch] = useState('');
   const [filterOccupancy, setFilterOccupancy] = useState('semua');
   const [filterActive, setFilterActive] = useState('semua');
@@ -996,6 +1015,98 @@ const handleSaveHousehold = async (e: React.FormEvent) => {
 };
 
 
+
+const loadKongsiParticipants = async (householdId: string) => {
+  const participants = await fetchKongsiParticipants(householdId);
+
+  setKongsiParticipants(participants);
+  setKongsiDrafts(
+    Object.fromEntries(
+      participants.map((item) => [
+        item.id,
+        { fullName: item.fullName, status: item.status },
+      ])
+    )
+  );
+};
+
+const openKongsiManager = async (household: Household) => {
+  setSelectedKongsiHousehold(household);
+  setIsKongsiModalOpen(true);
+  setIsLoadingKongsi(true);
+  setKongsiError('');
+  setNewKkName('');
+
+  try {
+    await loadKongsiParticipants(household.id);
+  } catch (err) {
+    setKongsiError(
+      err instanceof Error ? err.message : 'Gagal memuat data KK.'
+    );
+  } finally {
+    setIsLoadingKongsi(false);
+  }
+};
+
+const handleAddKongsiParticipant = async () => {
+  if (!canManage || !selectedKongsiHousehold) return;
+
+  if (!newKkName.trim()) {
+    setKongsiError('Nama kepala keluarga wajib diisi.');
+    return;
+  }
+
+  setIsSavingKongsi(true);
+  setKongsiError('');
+
+  try {
+    await addKongsiParticipant(
+      selectedKongsiHousehold.id,
+      newKkName
+    );
+    setNewKkName('');
+    await loadKongsiParticipants(selectedKongsiHousehold.id);
+  } catch (err) {
+    setKongsiError(
+      err instanceof Error ? err.message : 'Gagal menambahkan KK.'
+    );
+  } finally {
+    setIsSavingKongsi(false);
+  }
+};
+
+const handleSaveKongsiParticipant = async (
+  participant: AdminKongsiParticipant
+) => {
+  if (!canManage) return;
+
+  const draft = kongsiDrafts[participant.id];
+  if (!draft?.fullName.trim()) {
+    setKongsiError('Nama kepala keluarga wajib diisi.');
+    return;
+  }
+
+  setIsSavingKongsi(true);
+  setKongsiError('');
+
+  try {
+    await updateKongsiParticipant(
+      participant.id,
+      draft.fullName,
+      draft.status
+    );
+
+    if (selectedKongsiHousehold) {
+      await loadKongsiParticipants(selectedKongsiHousehold.id);
+    }
+  } catch (err) {
+    setKongsiError(
+      err instanceof Error ? err.message : 'Gagal menyimpan perubahan KK.'
+    );
+  } finally {
+    setIsSavingKongsi(false);
+  }
+};
 
 const handleUpdateHouseholdStatus = async (
   household: Household,
@@ -2724,6 +2835,14 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
                   {canManage && (
                     <div className="flex items-center justify-end gap-1.5">
                       <button
+                        type="button"
+                        onClick={() => openKongsiManager(household)}
+                        title="Kelola Kartu Keluarga"
+                        className="px-2 py-1.5 rounded-md border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-[10px] font-semibold whitespace-nowrap"
+                      >
+                        Kelola KK
+                      </button>
+                      <button
                         onClick={() => openEditHousehold(household)}
                         title="Edit data"
                         className="p-1.5 rounded-md border border-slate-200 text-slate-600 hover:text-emerald-700 hover:border-emerald-300"
@@ -2943,6 +3062,165 @@ const sensusSudahMengisiCount = activeHouseholds.filter(
     </div>
   </div>
 )}
+
+{canManage && isKongsiModalOpen && selectedKongsiHousehold && (
+  <div className="fixed inset-0 z-[60] bg-slate-950/40 flex items-center justify-center p-4">
+    <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-xl border border-slate-200">
+      <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-bold text-slate-900">
+            Kelola Kartu Keluarga
+          </h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Rumah {selectedKongsiHousehold.houseNumber} ·{' '}
+            {kongsiParticipants.length} KK terdaftar dalam data
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsKongsiModalOpen(false)}
+          className="text-slate-400 hover:text-slate-700 text-xl"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="p-5 space-y-4">
+        {kongsiError && (
+          <div className="rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-xs text-rose-700">
+            {kongsiError}
+          </div>
+        )}
+
+        {isLoadingKongsi ? (
+          <p className="text-xs text-slate-500 text-center py-6">
+            Memuat data KK...
+          </p>
+        ) : (
+          <>
+            <div className="space-y-3">
+              {kongsiParticipants.map((participant) => (
+                <div
+                  key={participant.id}
+                  className="rounded-xl border border-slate-200 p-3 space-y-3"
+                >
+                  <div className="text-xs font-bold text-emerald-800">
+                    KK {participant.kkNumber}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Nama Kepala Keluarga
+                    </label>
+                    <input
+                      value={
+                        kongsiDrafts[participant.id]?.fullName ?? ''
+                      }
+                      onChange={(e) =>
+                        setKongsiDrafts((prev) => ({
+                          ...prev,
+                          [participant.id]: {
+                            ...prev[participant.id],
+                            fullName: e.target.value,
+                          },
+                        }))
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Status Kongsi
+                    </label>
+                    <select
+                      value={
+                        kongsiDrafts[participant.id]?.status ??
+                        'belum_diverifikasi'
+                      }
+                      onChange={(e) =>
+                        setKongsiDrafts((prev) => ({
+                          ...prev,
+                          [participant.id]: {
+                            ...prev[participant.id],
+                            status: e.target.value as KongsiParticipantStatus,
+                          },
+                        }))
+                      }
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
+                    >
+                      <option value="belum_diverifikasi">
+                        Belum diverifikasi
+                      </option>
+                      <option value="terdaftar">Terdaftar</option>
+                      <option value="tidak_terdaftar">
+                        Tidak terdaftar
+                      </option>
+                    </select>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      disabled={isSavingKongsi}
+                      onClick={() =>
+                        handleSaveKongsiParticipant(participant)
+                      }
+                      className="rounded-lg bg-emerald-800 px-3 py-2 text-[11px] font-semibold text-white hover:bg-emerald-900 disabled:opacity-50"
+                    >
+                      Simpan KK {participant.kkNumber}
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {kongsiParticipants.length === 0 && (
+                <p className="text-xs text-slate-500 text-center py-4">
+                  Belum ada data KK untuk rumah ini.
+                </p>
+              )}
+            </div>
+
+            <div className="border-t border-slate-200 pt-4 space-y-2">
+              <h4 className="text-xs font-bold text-slate-800">
+                Tambah Kartu Keluarga
+              </h4>
+              <input
+                value={newKkName}
+                onChange={(e) => setNewKkName(e.target.value)}
+                placeholder="Nama kepala keluarga"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+              />
+              <button
+                type="button"
+                disabled={isSavingKongsi || !newKkName.trim()}
+                onClick={handleAddKongsiParticipant}
+                className="w-full rounded-lg bg-emerald-800 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-900 disabled:opacity-50"
+              >
+                {isSavingKongsi ? 'Menyimpan...' : '+ Tambah KK'}
+              </button>
+              <p className="text-[10px] text-slate-500">
+                Nomor KK akan dibuat otomatis oleh sistem. Status awal
+                peserta adalah Belum diverifikasi.
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="px-5 py-3 border-t border-slate-200 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setIsKongsiModalOpen(false)}
+          className="rounded-lg bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200"
+        >
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
       {adminTab === 'komunitas' && (
         <div className="space-y-6">
           {/* Header */}
