@@ -101,7 +101,7 @@ export const KongsiKematianView: React.FC = () => {
         <div className="relative">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-emerald-50">
             <ShieldCheck className="h-4 w-4" />
-            INFORMASI INTERNAL TERBATAS BLOK H
+            INFORMASI TERBATAS INTERNAL BLOK H
           </div>
           <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
             Kepesertaan Kongsi Kematian
