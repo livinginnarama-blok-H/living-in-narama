@@ -172,10 +172,12 @@ function KarangTarunaColumn({
   coordinator,
   deputy1,
   deputy2,
+  deputy3,
 }: {
   coordinator?: OrganizationMember;
   deputy1?: OrganizationMember;
   deputy2?: OrganizationMember;
+  deputy3?: OrganizationMember;
 }) {
   return (
     <div className="flex w-[210px] shrink-0 flex-col items-center">
@@ -192,6 +194,12 @@ function KarangTarunaColumn({
         <>
           <VerticalLine />
           <MemberCard member={deputy2} compact />
+        </>
+      )}
+      {deputy3 && (
+        <>
+          <VerticalLine />
+          <MemberCard member={deputy3} compact />
         </>
       )}
     </div>
@@ -466,6 +474,7 @@ export default function PengurusView() {
               coordinator={organization.youth}
               deputy1={organization.viceYouth1}
               deputy2={organization.viceYouth2}
+              deputy3={organization.viceYouth3}
             />
           </div>
 
