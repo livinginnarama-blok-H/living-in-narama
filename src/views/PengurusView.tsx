@@ -329,6 +329,11 @@ export default function PengurusView() {
       'Wakil Karang Taruna 2'
     ),
 
+        viceYouth3: find(
+      'Wakil Karang Taruna III',
+      'Wakil Karang Taruna 3'
+    ),
+
     advisors: findAdvisors(),
   };
 }, [members]);
