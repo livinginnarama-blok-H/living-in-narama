@@ -285,11 +285,12 @@ export interface PublicKongsiParticipant {
 
 export async function fetchPublicKongsiParticipants(): Promise<
   PublicKongsiParticipant[]
+  
 > {
   const { data, error } = await supabase.rpc(
     'get_public_kongsi_participants'
   );
-
+  
   if (error) {
     console.error(
       '[DataService] Gagal memuat peserta Kongsi Kematian:',
@@ -1884,9 +1885,7 @@ async fetchHouseholds(): Promise<Household[]> {
     id: item.id,
     houseNumber: item.house_number,
     residentName: item.resident_name,
-    occupancyStatus:
-  latestStatusByHousehold.get(item.id)?.occupancyStatus ??
-  (item.occupancy_status as Household['occupancyStatus']),
+    occupancyStatus: item.occupancy_status as Household['occupancyStatus'],
     isActive: item.is_active,
     phone: item.phone ?? undefined,
     familyMembers: item.family_members ?? undefined,
